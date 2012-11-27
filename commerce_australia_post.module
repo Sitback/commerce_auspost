@@ -10,7 +10,7 @@ require 'commerce_australia_post.json.inc';
 function commerce_australia_post_menu() {
   $items = array();
 
-  $items['admin/commerce/config/shipping/methods/australia_post/edit'] = array(
+  $items['admin/commerce/config/shipping/methods/australia-post/edit'] = array(
     'title' => 'Edit',
     'description' => 'Configure the Australia Post shipping method.',
     'page callback' => 'drupal_get_form',
@@ -126,13 +126,13 @@ function _commerce_australia_post_service_list() {
                                                    'service_code' => 'AUS_PARCEL_REGULAR',
                                                    'option_code'  => 'AUS_SERVICE_OPTION_STANDARD'),
     'AUS_SERVICE_OPTION_REGISTERED_POST'  => array('title'        => t('Regular Parcel - Registered Post'),
-                                                    'description' => t(''),
-                                                    'service_code' => 'AUS_PARCEL_REGULAR',
-                                                    'option_code' => 'AUS_SERVICE_OPTION_REGISTERED_POST'),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'AUS_PARCEL_REGULAR',
+                                                   'option_code'  => 'AUS_SERVICE_OPTION_REGISTERED_POST'),
     'AUS_PARCEL_EXPRESS'                  => array('title'        => t('Express Post Parcel'),
-                                                    'description' => t(''),
-                                                    'service_code' => 'AUS_PARCEL_EXPRESS',
-                                                    'option_code' => ''),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'AUS_PARCEL_EXPRESS',
+                                                   'option_code'  => ''),
   );
 
   /* Make a unique ID to identify the service by */
