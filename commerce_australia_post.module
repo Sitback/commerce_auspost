@@ -1,0 +1,151 @@
+<?php
+
+/**
+ * @file
+ * Handles main functionality for Commerce Australia Post module.
+ */
+
+require 'commerce_australia_post.json.inc';
+
+function commerce_australia_post_menu() {
+  $items = array();
+
+  $items['admin/commerce/config/shipping/methods/australia_post/edit'] = array(
+    'title' => 'Edit',
+    'description' => 'Configure the Australia Post shipping method.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_australia_post_settings_form'),
+    'access arguments' => array('administer shipping'),
+    'file' => 'commerce_australia_post.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_INLINE,
+    'weight' => 0,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_commerce_shipping_method_info().
+ */
+function commerce_australia_post_commerce_shipping_method_info() {
+  $shipping_methods = array();
+
+  $shipping_methods['australia_post'] = array(
+    'title' => t('Australia Post'),
+    'description' => t('Quote rates from Australia Post'),
+  );
+
+  return $shipping_methods;
+}
+
+/**
+ * Implements hook_commerce_shipping_service_info().
+ */
+function commerce_australia_post_commerce_shipping_service_info() {
+  $shipping_services = array();
+
+  $available_services = _commerce_australia_post_service_list();
+  $selected_services = variable_get('commerce_australia_post_services', array());
+
+  foreach ($selected_services as $id => $val) {
+    if ( $val !== 0 ) { // if you find a selected one...
+      $service = $available_services[$id];
+      $shipping_services[$service['slug']] = array(
+        'title' => t($service['title']),
+        'description' => t($service['description']),
+        'service_code' => $service['service_code'],
+        'option_code' => $service['option_code'],
+        'display_title' => t($service['title']),
+        'shipping_method' => 'australia_post',
+        'price_component' => 'shipping',
+        'callbacks' => array(
+          'rate' => 'commerce_australia_post_service_rate_order',
+        )
+      );
+    }
+  }
+
+  return $shipping_services;
+}
+
+/**
+ * Shipping service callback: returns a base price array for a shipping service
+ * calculated for the given order.
+ */
+function commerce_australia_post_service_rate_order($shipping_service, $order) {
+  // First attempt to recover cached shipping rates for the current order.
+  $rates = commerce_shipping_rates_cache_get('australia_post', $order, variable_get('commerce_australia_post_rates_timeout', 0));
+
+  // If no rates were recovered from the cache or the cached rates are over one minute old...
+  if ( !$rates ) {
+    $rates = array();
+  }
+
+  if ( !in_array($shipping_service['name'], $rates) ) {
+    // Build the rate request for the current order. This returns XML.
+    $rate_request = commerce_australia_post_build_rate_request($order);
+
+    // If we got a valid rate request url back...
+    if ( is_array($rate_request) ) {
+      // Submit the API request to UPS.
+      $request_attributes = $rate_request['attributes'];
+      $request_attributes['service_code'] = $shipping_service['service_code'];
+      $request_attributes['option_code'] = $shipping_service['option_code'];
+
+      $response = commerce_australia_post_api_request($request_attributes);
+
+      if (!empty($response->data)) {
+        // Parse the response to cache all requested rates for the current order.
+        $response_data = drupal_json_decode($response->data);
+
+        $rates[$shipping_service['name']] = array(
+          'amount' => commerce_currency_decimal_to_amount($response_data['postage_result']['total_cost'], 'AUD'),
+          'currency_code' => 'AUD',
+          'data' => array(),
+        );
+        // Cache the calculated rates for subsequent requests.
+        commerce_shipping_rates_cache_set('australia_post', $order, $rates);
+      }
+    }
+  }
+
+  // Return the rate for the requested service or FALSE if not found.
+  return isset($rates[$shipping_service['name']]) ? $rates[$shipping_service['name']] : FALSE;
+}
+
+/**
+ * Convenience function to get Australia Post codes for their services.
+ * TODO: allow more options
+ */
+function _commerce_australia_post_service_list() {
+  $services =  array(
+    // Domestic services
+    'AUS_SERVICE_OPTION_STANDARD'         => array('title'        => t('Regular Parcel - Standard Service'),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'AUS_PARCEL_REGULAR',
+                                                   'option_code'  => 'AUS_SERVICE_OPTION_STANDARD'),
+    'AUS_SERVICE_OPTION_REGISTERED_POST'  => array('title'        => t('Regular Parcel - Registered Post'),
+                                                    'description' => t(''),
+                                                    'service_code' => 'AUS_PARCEL_REGULAR',
+                                                    'option_code' => 'AUS_SERVICE_OPTION_REGISTERED_POST'),
+    'AUS_PARCEL_EXPRESS'                  => array('title'        => t('Express Post Parcel'),
+                                                    'description' => t(''),
+                                                    'service_code' => 'AUS_PARCEL_EXPRESS',
+                                                    'option_code' => ''),
+  );
+
+  /* Make a unique ID to identify the service by */
+  foreach ($services as $key => $service) {
+    $service['slug'] = str_replace(' - ', '-', drupal_strtolower($service['title']));
+    $service['slug'] = str_replace(' ', '_', $service['slug']);
+    $services[$key] = $service;
+  }
+  return $services;
+}
+
+function commerce_australia_post_commerce_shipping_service_name($service_code) {
+  $service_names = _commerce_australia_post_service_list();
+  return $service_names[$service_code]['slug'];
+}
+
