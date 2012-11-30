@@ -2,7 +2,7 @@ name = Australia Post
 description = Integrates Australia Post with Commerce Shipping to rate selected Australia Post services during checkout.
 package = Commerce (shipping)
 dependencies[] = commerce
-dependencies[] = commerce_shipping
+dependencies[] = commerce_shipping (2.x)
 dependencies[] = commerce_physical
 core = 7.x
 
