@@ -98,6 +98,7 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
       if (!empty($response->data)) {
         // Parse the response to cache all requested rates for the current order.
         $response_data = drupal_json_decode($response->data);
+        $shipping_price = $response_data['postage_result']['total_cost'] * $rate_request['packages'];
 
         $rates[$shipping_service['name']] = array(
           'amount' => commerce_currency_decimal_to_amount($response_data['postage_result']['total_cost'], 'AUD'),
