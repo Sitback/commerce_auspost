@@ -1,5 +1,5 @@
 name = Australia Post
-description = Integrates Australia Post with Commerce Shipping to rate selected Australia Post services during checkout.
+description = Integrates Australia Post postage estimation with Commerce Shipping.
 package = Commerce (shipping)
 dependencies[] = commerce
 dependencies[] = commerce_shipping (7.x-2.x)
