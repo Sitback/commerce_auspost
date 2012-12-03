@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Handles installation for Commerce Australia Post module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_australia_post_uninstall() {
+  $fields = array(
+    'commerce_australia_post_api_key',
+    'commerce_australia_post_postal_code',
+    'commerce_australia_post_services',
+    'commerce_australia_post_default_package_size_length',
+    'commerce_australia_post_default_package_size_width',
+    'commerce_australia_post_default_package_size_height',
+  );
+
+  foreach ($fields as $data) {
+    variable_del($data);
+  }
+}
