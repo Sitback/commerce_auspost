@@ -5,7 +5,9 @@
  * Handles admin settings page for Commerce Australia Post module.
  */
 
-/* hook_settings_form() */
+/*
+ * Implements hook_settings_form() 
+ */
 function commerce_australia_post_settings_form($form, &$form_state) {
   $auspost_link = l(t('auspost.com.au'), 'http://auspost.com.au/devcentre/pacpcs.asp', array('attributes' => array('target' => '_blank')));
   $form['api'] = array(
@@ -32,7 +34,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Postal Code'),
     '#size' => 5,
-    '#default_value' => variable_get('commerce_australia_post_postal_code')
+    '#default_value' => variable_get('commerce_australia_post_postal_code'),
   );
 
   $form['services'] = array(
@@ -47,10 +49,10 @@ function commerce_australia_post_settings_form($form, &$form_state) {
   $form['services']['commerce_australia_post_services'] = array(
     '#type' => 'checkboxes',
     '#options' => $array_options,
-    '#default_value' => variable_get('commerce_australia_post_services', array())
+    '#default_value' => variable_get('commerce_australia_post_services', array()),
   );
 
-  // Fields for default package size (cm)
+  // Fields for default package size (cm).
   $form['default_package_size'] = array(
     '#type' => 'fieldset',
     '#title' => t('Default maximum package size (cm)'),
@@ -87,7 +89,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
       </ul>.',
   );
-
+  
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
@@ -115,3 +117,4 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
     form_set_error('commerce_australia_post_default_package_size_length', t('The girth (2*width + 2*height) of the package size must be 140 cm or less.'));
   }
 }
+

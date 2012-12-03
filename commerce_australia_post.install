@@ -22,3 +22,4 @@ function commerce_australia_post_uninstall() {
     variable_del($data);
   }
 }
+
