@@ -8,7 +8,7 @@
 require 'commerce_australia_post.json.inc';
 
 /*
- * Implements hook_menu()
+ * Implements hook_menu().
  */
 function commerce_australia_post_menu() {
   $items = array();

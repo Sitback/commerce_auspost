@@ -6,7 +6,7 @@
  */
 
 /*
- * Implements hook_settings_form() 
+ * Implements hook_settings_form().
  */
 function commerce_australia_post_settings_form($form, &$form_state) {
   $auspost_link = l(t('auspost.com.au'), 'http://auspost.com.au/devcentre/pacpcs.asp', array('attributes' => array('target' => '_blank')));
@@ -14,7 +14,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('auspost API credentials'),
     '#collapsible' => TRUE,
-    '#description' => t('In order to obtain shipping rate estimates, you must have an account with Australia Post. You can apply for Australia Post API credentials at !auspost', array('!auspost' => $auspost_link)),
+    '#description' => t('In order to obtain shipping rate estimates, you must have an account with Australia Post. You can apply for Australia Post API credentials at @auspost', array('@auspost' => $auspost_link)),
   );
 
   $form['api']['commerce_australia_post_api_key'] = array(
@@ -89,7 +89,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
       </ul>.',
   );
-  
+
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
@@ -102,7 +102,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
  */
 function commerce_australia_post_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
-  
+
   // Ensure the default package size is less than the maximum
   $dimensions = array($values['commerce_australia_post_default_package_size_length'],
                       $values['commerce_australia_post_default_package_size_width'],

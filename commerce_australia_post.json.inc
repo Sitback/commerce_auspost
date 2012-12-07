@@ -27,7 +27,7 @@ function commerce_australia_post_build_rate_request($order) {
   // Create an array of packages
   // $packages = array(
   //    'items' => number of items,
-  //    'length' => length 
+  //    'length' => length
 
   // Loop over each line item on the order.
   foreach ($order_wrapper->commerce_line_items as $delta => $line_item_wrapper) {
@@ -55,7 +55,7 @@ function commerce_australia_post_build_rate_request($order) {
         if (empty($volume['volume'])) {
           // Create a volume value array using the converted unit type.
           $volume = array(
-            'volume' => $converted_dimensions['volume'], 
+            'volume' => $converted_dimensions['volume'],
             'unit' => 'cm',
           );
         }
@@ -66,7 +66,7 @@ function commerce_australia_post_build_rate_request($order) {
 
     }
   }
-****/
+ */
 
 //FIXME: The following assumes everything is the same density and does not optimally pack
 
