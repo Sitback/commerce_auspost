@@ -21,10 +21,21 @@ http://drupal.org/project/commerce_shipping
 commerce_physical
 http://drupal.org/project/commerce_physical
 
+This module requires an API key with Australia Post in order to access their shipping calculations. 
+You can apply for one free here: http://auspost.com.au/devcentre/pacpcs.asp
+
 -- INSTALLATION --
 
 * Install as usual, see http://drupal.org/node/70151 for further information.
 
+
+-- CONFIGURATION --
+
+* Go to Store -> Shipping -> Shipping Methods
+* Edit the Australia Post Method
+  * Put in your Australia Post API key
+  * Select the shipping methods you wish to make available in your store
+* Done! (See your shipping checkout page).
 
 -- CONTACT --
 
