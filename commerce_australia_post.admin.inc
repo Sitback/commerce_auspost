@@ -9,12 +9,12 @@
  * Implements hook_settings_form().
  */
 function commerce_australia_post_settings_form($form, &$form_state) {
-  $auspost_link = l(t('auspost.com.au'), 'http://auspost.com.au/devcentre/pacpcs.asp', array('attributes' => array('target' => '_blank')));
   $form['api'] = array(
     '#type' => 'fieldset',
     '#title' => t('auspost API credentials'),
     '#collapsible' => TRUE,
-    '#description' => t('In order to obtain shipping rate estimates, you must have an account with Australia Post. You can apply for Australia Post API credentials at @auspost', array('@auspost' => $auspost_link)),
+    '#description' => t('In order to obtain shipping rate estimates, you must have an account with Australia Post. You can apply for Australia Post API credentials at !auspost',
+                      array('!auspost' => l(t('auspost.com.au'), 'http://auspost.com.au/devcentre/pacpcs.asp', array('attributes' => array('target' => '_blank'))))),
   );
 
   $form['api']['commerce_australia_post_api_key'] = array(
