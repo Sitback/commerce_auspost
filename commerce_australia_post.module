@@ -5,8 +5,6 @@
  * Handles main functionality for Commerce Australia Post module.
  */
 
-require 'commerce_australia_post.json.inc';
-
 /*
  * Implements hook_menu().
  */
@@ -77,6 +75,8 @@ function commerce_australia_post_commerce_shipping_service_info() {
  * calculated for the given order.
  */
 function commerce_australia_post_service_rate_order($shipping_service, $order) {
+  module_load_include('inc', 'commerce_australia_post', 'commerce_australia_post.json');
+
   // First attempt to recover cached shipping rates for the current order.
   $rates = commerce_shipping_rates_cache_get('australia_post', $order, variable_get('commerce_australia_post_rates_timeout', 0));
 
