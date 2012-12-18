@@ -90,7 +90,7 @@ function commerce_australia_post_build_rate_request($order) {
   $number_of_packages = ceil($volume['volume'] / $default_package_volume);
 
   /* Ship To - Customer Shipping Address */
-  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
   // Prepare the shipping address for use in the request.
   if (!empty($order_wrapper->commerce_customer_shipping->commerce_customer_address)) {
     $shipping_address = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
