@@ -88,21 +88,36 @@ function commerce_australia_post_settings_form($form, &$form_state) {
       <ul>
       <li>If the total products exceed the size of one package,</li>
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
-      </ul>.',
+      </ul>',
   );
 
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
   );
-  return system_settings_form($form);
+
+  return $form;
 }
 
 /*
  * Implements hook_form_validate().
  */
 function commerce_australia_post_settings_form_validate($form, &$form_state) {
+
   $values = $form_state['values'];
+
+  if (!is_numeric($values['commerce_australia_post_default_package_size_length']) || $values['commerce_australia_post_default_package_size_length'] <= 0) {
+    form_set_error('commerce_australia_post_default_package_size_length', t('Length must be a positive number.'));
+
+  }
+  if (!is_numeric($values['commerce_australia_post_default_package_size_width']) || $values['commerce_australia_post_default_package_size_width'] <= 0) {
+    form_set_error('commerce_australia_post_default_package_size_width', t('Width must be a positive number.'));
+
+  }
+  if (!is_numeric($values['commerce_australia_post_default_package_size_height']) || $values['commerce_australia_post_default_package_size_height'] <= 0) {
+    form_set_error('commerce_australia_post_default_package_size_height', t('Height must be a positive number.'));
+
+  }
 
   // Ensure the default package size is less than the maximum
   $dimensions = array($values['commerce_australia_post_default_package_size_length'],
@@ -119,3 +134,30 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
   }
 }
 
+/*
+ * Implements hook_form_submit().
+ */
+function commerce_australia_post_settings_form_submit($form, &$form_state) {
+
+  $services = variable_get('commerce_australia_post_services', NULL);
+
+  // If the selected services have changed then rebuild caches.
+  if ($services !== $form_state['values']['commerce_australia_post_services']) {
+    variable_set('commerce_australia_post_services', $form_state['values']['commerce_australia_post_services']);
+
+    commerce_shipping_services_reset();
+    entity_defaults_rebuild();
+    rules_clear_cache(TRUE);
+    menu_rebuild();
+  }
+
+  variable_set('commerce_australia_post_api_key', $form_state['values']['commerce_australia_post_api_key']);
+  variable_set('commerce_australia_post_postal_code', $form_state['values']['commerce_australia_post_postal_code']);
+  variable_set('commerce_australia_post_default_package_size_length', $form_state['values']['commerce_australia_post_default_package_size_length']);
+  variable_set('commerce_australia_post_default_package_size_width', $form_state['values']['commerce_australia_post_default_package_size_width']);
+  variable_set('commerce_australia_post_default_package_size_height', $form_state['values']['commerce_australia_post_default_package_size_height']);
+
+
+
+  drupal_set_message(t('The Australia Post configuration options have been saved.'));
+}
