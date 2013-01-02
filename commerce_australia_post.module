@@ -96,6 +96,14 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
       $request_attributes['service_code'] = $shipping_service['service_code'];
       $request_attributes['option_code'] = $shipping_service['option_code'];
 
+      // Check we have the postcodes. If not, don't supply any auspost options.
+      if (!is_numeric($request_attributes['from_postcode'])) {
+        return false;
+      }
+      if (!is_numeric($request_attributes['to_postcode'])) {
+        return false;
+      }
+
       $response = commerce_australia_post_api_request($request_attributes);
 
       if (!empty($response->data)) {

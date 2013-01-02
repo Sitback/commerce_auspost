@@ -35,6 +35,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#title' => t('Postal Code'),
     '#size' => 5,
     '#default_value' => variable_get('commerce_australia_post_postal_code'),
+    '#required' => TRUE,
   );
 
   $form['services'] = array(
@@ -57,7 +58,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#type' => 'fieldset',
     '#title' => t('Default maximum package size (cm)'),
     '#collapsible' => FALSE,
-    '#description' => 'Australia Post requires a package size when determining estimates.',
+    '#description' => t('Australia Post requires a package size when determining estimates.'),
   );
   $form['default_package_size']['commerce_australia_post_default_package_size_length'] = array(
     '#type' => 'textfield',
