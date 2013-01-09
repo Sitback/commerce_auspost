@@ -108,10 +108,13 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
       }
 
       // Check we have the postcodes. If not, don't supply any auspost options.
+
+      // Australian postcodes will always be numeric
       if (!is_numeric($request_attributes['from_postcode'])) {
         return false;
       }
-      if (!is_numeric($request_attributes['to_postcode'])) {
+      // But international postcodes might contain characters (e.g. UK)
+      if (!isset($request_attributes['to_postcode'])) { //
         return false;
       }
 
