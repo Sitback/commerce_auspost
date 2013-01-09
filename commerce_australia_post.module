@@ -57,6 +57,7 @@ function commerce_australia_post_commerce_shipping_service_info() {
         'description' => t($service['description']),
         'service_code' => $service['service_code'],
         'option_code' => $service['option_code'],
+        'destination' => $service['destination'],
         'display_title' => t($service['title']),
         'shipping_method' => 'australia_post',
         'price_component' => 'shipping',
@@ -96,6 +97,16 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
       $request_attributes['service_code'] = $shipping_service['service_code'];
       $request_attributes['option_code'] = $shipping_service['option_code'];
 
+      $destination = $shipping_service['destination'];
+
+      if ( ($request_attributes['country_code'] != 'AU' && 
+           $destination == 'domestic') ||
+           ($request_attributes['country_code'] == 'AU' &&
+           $destination == 'international') ) {
+        // Make sure we only test international methods for outside AU and vice versa
+        return false;
+      }
+
       // Check we have the postcodes. If not, don't supply any auspost options.
       if (!is_numeric($request_attributes['from_postcode'])) {
         return false;
@@ -104,20 +115,26 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
         return false;
       }
 
-      $response = commerce_australia_post_api_request($request_attributes);
+      $response = commerce_australia_post_api_request($request_attributes, $destination);
 
       if (!empty($response->data)) {
         // Parse the response to cache all requested rates for the current order.
         $response_data = drupal_json_decode($response->data);
-        $shipping_price = $response_data['postage_result']['total_cost'] * $rate_request['packages'];
 
-        $rates[$shipping_service['name']] = array(
-          'amount' => commerce_currency_decimal_to_amount($response_data['postage_result']['total_cost'], 'AUD'),
-          'currency_code' => 'AUD',
-          'data' => array(),
-        );
-        // Cache the calculated rates for subsequent requests.
-        commerce_shipping_rates_cache_set('australia_post', $order, $rates);
+        if ( isset($response_data['postage_result']) ) {
+          $shipping_price = ($response_data['postage_result']['total_cost'] * $rate_request['packages']);
+
+          if ( $shipping_price == 0 ) return false;
+
+          $rates[$shipping_service['name']] = array(
+            'amount' => commerce_currency_decimal_to_amount($shipping_price, 'AUD'),
+            'currency_code' => 'AUD',
+            'data' => array(),
+          );
+
+          // Cache the calculated rates for subsequent requests.
+          commerce_shipping_rates_cache_set('australia_post', $order, $rates);
+        }
       }
     }
   }
@@ -136,15 +153,34 @@ function _commerce_australia_post_service_list() {
     'AUS_SERVICE_OPTION_STANDARD'         => array('title'        => t('Regular Parcel - Standard Service'),
                                                    'description'  => t(''),
                                                    'service_code' => 'AUS_PARCEL_REGULAR',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_STANDARD'),
+                                                   'option_code'  => 'AUS_SERVICE_OPTION_STANDARD',
+                                                   'destination'  => 'domestic'),
     'AUS_SERVICE_OPTION_REGISTERED_POST'  => array('title'        => t('Regular Parcel - Registered Post'),
                                                    'description'  => t(''),
                                                    'service_code' => 'AUS_PARCEL_REGULAR',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_REGISTERED_POST'),
+                                                   'option_code'  => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                                   'destination'  => 'domestic'),
     'AUS_PARCEL_EXPRESS'                  => array('title'        => t('Express Post Parcel'),
                                                    'description'  => t(''),
                                                    'service_code' => 'AUS_PARCEL_EXPRESS',
-                                                   'option_code'  => ''),
+                                                   'option_code'  => '',
+                                                   'destination'  => 'domestic'),
+
+    'INTL_SERVICE_EPI'                    => array('title'        => t('Express Post International'),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'INTL_SERVICE_EPI',
+                                                   'option_code'  => '',
+                                                   'destination'  => 'international'),
+    'INTL_SERVICE_RPI'                    => array('title'        => t('Registered Post International'),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'INTL_SERVICE_RPI',
+                                                   'option_code'  => '',
+                                                   'destination'  => 'international'),
+    'INTL_SERVICE_AIR_MAIL'               => array('title'        => t('International Air Mail'),
+                                                   'description'  => t(''),
+                                                   'service_code' => 'INTL_SERVICE_AIR_MAIL',
+                                                   'option_code'  => '',
+                                                   'destination'  => 'international'),
   );
 
   /* Make a unique ID to identify the service by */

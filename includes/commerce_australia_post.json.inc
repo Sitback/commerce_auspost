@@ -100,7 +100,7 @@ function commerce_australia_post_build_rate_request($order) {
 
   $attributes['from_postcode'] = variable_get('commerce_australia_post_postal_code');
   $attributes['to_postcode'] = $shipping_address['postal_code'];
-
+  $attributes['country_code'] = $shipping_address['country'];
   $attributes['length'] = variable_get('commerce_australia_post_default_package_size_length');
   $attributes['width'] = variable_get('commerce_australia_post_default_package_size_width');
   $attributes['height'] = variable_get('commerce_australia_post_default_package_size_height');
@@ -115,9 +115,9 @@ function commerce_australia_post_build_rate_request($order) {
  * @param $xml
  *   An XML string to submit to the Progistics XML Processor.
  */
-function commerce_australia_post_api_request($attributes) {
+function commerce_australia_post_api_request($attributes, $destination = 'domestic') {
 
-  $url = 'https://auspost.com.au/api/postage/parcel/domestic/calculate.json';
+  $url = 'https://auspost.com.au/api/postage/parcel/' . $destination . '/calculate.json';
   $url .= '?' . drupal_http_build_query($attributes);
 
   $options = array(
