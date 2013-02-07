@@ -35,6 +35,9 @@ You can apply for one free here: http://auspost.com.au/devcentre/pacpcs.asp
 * Edit the Australia Post Method
   * Put in your Australia Post API key
   * Select the shipping methods you wish to make available in your store
+* Go to Store -> Products -> Product Types -> Edit your product type
+  * Add physical dimensions and physical weight to your product
+* Update your available products with physical details
 * Done! (See your shipping checkout page).
 
 -- CONTACT --

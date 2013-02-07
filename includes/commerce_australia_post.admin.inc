@@ -5,7 +5,7 @@
  * Handles admin settings page for Commerce Australia Post module.
  */
 
-/*
+/**
  * Implements hook_settings_form().
  */
 function commerce_australia_post_settings_form($form, &$form_state) {
@@ -83,8 +83,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
   );
   $form['default_package_size']['details'] = array(
     '#markup' => 'The package size is used to determine the number of packages necessary to
-      create a Australia Post shipping cost estimate. <strong>If products do not have physical dimensions and
-      weights associated with them, the estimates will not be accurate.</strong> The logic implemented works as:
+      create a Australia Post shipping cost estimate. <strong>Auspost shipping will not be available to items with no dimensions or weight.</strong> The logic implemented works as:
       <ul>
       <li>If the total products exceed the size of one package,</li>
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
@@ -99,7 +98,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
   return $form;
 }
 
-/*
+/**
  * Implements hook_form_validate().
  */
 function commerce_australia_post_settings_form_validate($form, &$form_state) {
@@ -134,7 +133,7 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
   }
 }
 
-/*
+/**
  * Implements hook_form_submit().
  */
 function commerce_australia_post_settings_form_submit($form, &$form_state) {

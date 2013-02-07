@@ -5,7 +5,7 @@
  * Handles main functionality for Commerce Australia Post module.
  */
 
-/*
+/**
  * Implements hook_menu().
  */
 function commerce_australia_post_menu() {
@@ -92,7 +92,7 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
 
     // If we got a valid rate request url back...
     if (is_array($rate_request)) {
-      // Submit the API request to UPS.
+      // Submit the API request to Australia Post.
       $request_attributes = $rate_request['attributes'];
       $request_attributes['service_code'] = $shipping_service['service_code'];
       $request_attributes['option_code'] = $shipping_service['option_code'];
@@ -186,7 +186,7 @@ function _commerce_australia_post_service_list() {
                                                    'destination'  => 'international'),
   );
 
-  /* Make a unique ID to identify the service by */
+  // Make a unique ID to identify the service by
   foreach ($services as $key => $service) {
     $service['slug'] = str_replace(' - ', '-', drupal_strtolower($service['title']));
     $service['slug'] = str_replace(' ', '_', $service['slug']);
@@ -195,6 +195,9 @@ function _commerce_australia_post_service_list() {
   return $services;
 }
 
+/**
+ * Returns a computer friendly slug for a service code
+ */
 function commerce_australia_post_commerce_shipping_service_name($service_code) {
   $service_names = _commerce_australia_post_service_list();
   return $service_names[$service_code]['slug'];
