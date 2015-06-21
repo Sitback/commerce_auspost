@@ -128,7 +128,7 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
   if ($length > 105) {
     form_set_error('commerce_australia_post_default_package_size_length', t('The greatest dimension of the package size must be 105 cm or less.'));
   }
-  if ($length + $girth > 140) {
+  if ($girth > 140) {
     form_set_error('commerce_australia_post_default_package_size_length', t('The girth (2*width + 2*height) of the package size must be 140 cm or less.'));
   }
 }
