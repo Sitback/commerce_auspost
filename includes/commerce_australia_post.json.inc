@@ -80,7 +80,21 @@ function commerce_australia_post_api_request($attributes, $destination = 'domest
     'headers' => array('AUTH-KEY' => check_plain(variable_get('commerce_australia_post_api_key'))),
   );
 
+  // Log the API request if specified.
+  $message = t('');
+  $logging = variable_get('commerce_australia_post_log', array());
+  if (isset($logging['request']) && $logging['request']) {
+    if (empty($message)) {
+      $message = t('Submitting API request to Australia Post');
+    }
+    watchdog('auspost', '@message:<pre>@url</pre><pre>@options</pre>', array('@message' => $message, '@url' => $url, '@options' => print_r($options, true)));
+  }
+
   $result = drupal_http_request($url, $options);
+
+  if (isset($logging['response']) && $logging['response']) {
+    watchdog('auspost', 'API response received:<pre>'.print_r($result, true).'</pre>');
+  }
 
   // If we received data back from the server...
   if (!empty($result)) {

@@ -100,6 +100,15 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#title' => t('Show Australia Post description in addition to the title on Shipping Service selection pane'),
     '#default_value' => variable_get('commerce_australia_post_show_description', 0),
   );
+  $form['advanced_options']['commerce_australia_post_log'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Log the following messages for debugging'),
+    '#options' => array(
+      'request' => t('API request messages'),
+      'response' => t('API response messages'),
+    ),
+    '#default_value' => variable_get('commerce_australia_post_log', array()),
+  );
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
