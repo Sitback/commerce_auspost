@@ -89,7 +89,17 @@ function commerce_australia_post_settings_form($form, &$form_state) {
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
       </ul>',
   );
-
+  $form['advanced_options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['advanced_options']['commerce_australia_post_show_description'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show Australia Post description in addition to the title on Shipping Service selection pane'),
+    '#default_value' => variable_get('commerce_australia_post_show_description', 0),
+  );
   $form['actions']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save configuration'),
@@ -155,8 +165,7 @@ function commerce_australia_post_settings_form_submit($form, &$form_state) {
   variable_set('commerce_australia_post_default_package_size_length', $form_state['values']['commerce_australia_post_default_package_size_length']);
   variable_set('commerce_australia_post_default_package_size_width', $form_state['values']['commerce_australia_post_default_package_size_width']);
   variable_set('commerce_australia_post_default_package_size_height', $form_state['values']['commerce_australia_post_default_package_size_height']);
-
-
+  variable_set('commerce_australia_post_show_description', $form_state['values']['commerce_australia_post_show_description']);
 
   drupal_set_message(t('The Australia Post configuration options have been saved.'));
 }
