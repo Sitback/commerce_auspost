@@ -14,7 +14,11 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#title' => t('auspost API credentials'),
     '#collapsible' => TRUE,
     '#description' => t('In order to obtain shipping rate estimates, you must have an account with Australia Post. You can apply for Australia Post API credentials at !auspost',
-                      array('!auspost' => l(t('auspost.com.au'), 'http://auspost.com.au/devcentre/pacpcs.asp', array('attributes' => array('target' => '_blank'))))),
+                      array(
+                        '!auspost' => l(t('auspost.com.au'),
+                        'http://auspost.com.au/devcentre/pacpcs.asp',
+                          array('attributes' => array('target' => '_blank'))))
+    ),
   );
 
   $form['api']['commerce_australia_post_api_key'] = array(
@@ -23,7 +27,6 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#default_value' => variable_get('commerce_australia_post_api_key'),
     '#required' => TRUE,
   );
-
 
   $form['origin'] = array(
     '#type' => 'fieldset',
@@ -137,13 +140,15 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
 
   }
 
-  // Ensure the default package size is less than the maximum
-  $dimensions = array($values['commerce_australia_post_default_package_size_length'],
-                      $values['commerce_australia_post_default_package_size_width'],
-                      $values['commerce_australia_post_default_package_size_height']);
+  // Ensure the default package size is less than the maximum.
+  $dimensions = array(
+                  $values['commerce_australia_post_default_package_size_length'],
+                  $values['commerce_australia_post_default_package_size_width'],
+                  $values['commerce_australia_post_default_package_size_height']
+                );
   sort($dimensions);
   list($height, $width, $length) = $dimensions;
-  $girth = 2*$width + 2*$height;
+  $girth = 2 * $width + 2 * $height;
   if ($length > 105) {
     form_set_error('commerce_australia_post_default_package_size_length', t('The greatest dimension of the package size must be 105 cm or less.'));
   }
@@ -175,6 +180,7 @@ function commerce_australia_post_settings_form_submit($form, &$form_state) {
   variable_set('commerce_australia_post_default_package_size_width', $form_state['values']['commerce_australia_post_default_package_size_width']);
   variable_set('commerce_australia_post_default_package_size_height', $form_state['values']['commerce_australia_post_default_package_size_height']);
   variable_set('commerce_australia_post_show_description', $form_state['values']['commerce_australia_post_show_description']);
+  variable_set('commerce_australia_post_log', $form_state['values']['commerce_australia_post_log']);
 
   drupal_set_message(t('The Australia Post configuration options have been saved.'));
 }

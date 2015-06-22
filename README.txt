@@ -21,8 +21,9 @@ http://drupal.org/project/commerce_shipping
 commerce_physical
 http://drupal.org/project/commerce_physical
 
-This module requires an API key with Australia Post in order to access their shipping calculations. 
-You can apply for one free here: http://auspost.com.au/devcentre/pacpcs.asp
+This module requires an API key with Australia Post in order to access their
+shipping calculations. 
+You can apply for one free here: http://developers.auspost.com.au
 
 -- INSTALLATION --
 
@@ -34,17 +35,18 @@ You can apply for one free here: http://auspost.com.au/devcentre/pacpcs.asp
 * Go to Store -> Shipping -> Shipping Methods
 * Edit the Australia Post Method
   * Put in your Australia Post API key
+  * Enter the ship from postcode
   * Select the shipping methods you wish to make available in your store
 * Go to Store -> Products -> Product Types -> Edit your product type
   * Add physical dimensions and physical weight to your product
-* Update your available products with physical details
+  * Update your available products with physical details
 * Done! (See your shipping checkout page).
 
 -- CONTACT --
 
 Current maintainers:
 * Joshua Hesketh - http://drupal.org/user/100807
+* Craig Herbert - http://drupal.org/user/3209007
 
 This project has been sponsored by:
 * eighty options - http://www.eightyoptions.com.au/
-

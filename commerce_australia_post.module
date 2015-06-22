@@ -50,26 +50,27 @@ function commerce_australia_post_commerce_shipping_service_info() {
   $selected_services = variable_get('commerce_australia_post_services', array());
 
   foreach ($selected_services as $id => $val) {
-    if ($val !== 0) { // If you find a selected one...
+    // If you find a selected one...
+    if ($val !== 0) {
       $service = $available_services[$id];
       if (variable_get('commerce_australia_post_show_description', FALSE)) {
-        $description = t($service['description']);
+        $description = $service['description'];
       }
       else {
-        $description = t('');
+        $description = '';
       }
       $shipping_services[$service['slug']] = array(
-        'title' => t($service['title']),
+        'title' => $service['title'],
         'description' => $description,
         'service_code' => $service['service_code'],
         'option_code' => $service['option_code'],
         'destination' => $service['destination'],
-        'display_title' => t($service['display_title']),
+        'display_title' => $service['display_title'],
         'shipping_method' => 'australia_post',
         'price_component' => $service['slug'],
         'callbacks' => array(
           'rate' => 'commerce_australia_post_service_rate_order',
-        )
+        ),
       );
     }
   }
@@ -78,7 +79,8 @@ function commerce_australia_post_commerce_shipping_service_info() {
 }
 
 /**
- * Shipping service callback: returns a base price array for a shipping service
+ * Shipping service callback:
+ * returns a base price array for a shipping service
  * calculated for the given order.
  */
 function commerce_australia_post_service_rate_order($shipping_service, $order) {
@@ -87,7 +89,8 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
   // First attempt to recover cached shipping rates for the current order.
   $rates = commerce_shipping_rates_cache_get('australia_post', $order, variable_get('commerce_australia_post_rates_timeout', 0));
 
-  // If no rates were recovered from the cache or the cached rates are over one minute old...
+  // If no rates were recovered from the cache
+  // or the cached rates are over one minute old...
   if (!$rates) {
     $rates = array();
   }
@@ -105,35 +108,36 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
 
       $destination = $shipping_service['destination'];
 
-      if ( ($request_attributes['country_code'] != 'AU' && 
-           $destination == 'domestic') ||
-           ($request_attributes['country_code'] == 'AU' &&
-           $destination == 'international') ) {
-        // Make sure we only test international methods for outside AU and vice versa
-        return false;
+      // Only test international methods for outside AU and vice versa.
+      if (($request_attributes['country_code'] != 'AU' &&
+          $destination == 'domestic') ||
+          ($request_attributes['country_code'] == 'AU' &&
+          $destination == 'international')) {
+        return FALSE;
       }
 
       // Check we have the postcodes. If not, don't supply any auspost options.
-
-      // Australian postcodes will always be numeric
+      // Australian postcodes will always be numeric.
       if (!is_numeric($request_attributes['from_postcode'])) {
-        return false;
+        return FALSE;
       }
-      // But international postcodes might contain characters (e.g. UK)
-      if (!isset($request_attributes['to_postcode'])) { //
-        return false;
+      // But international postcodes might contain characters (for example UK)
+      if (!isset($request_attributes['to_postcode'])) {
+        return FALSE;
       }
 
       $response = commerce_australia_post_api_request($request_attributes, $destination);
 
       if (!empty($response->data)) {
-        // Parse the response to cache all requested rates for the current order.
+        // Parse $response to cache all requested rates for the current order.
         $response_data = drupal_json_decode($response->data);
 
-        if ( isset($response_data['postage_result']) ) {
+        if (isset($response_data['postage_result'])) {
           $shipping_price = ($response_data['postage_result']['total_cost'] * $rate_request['packages']);
 
-          if ( $shipping_price == 0 ) return false;
+          if ($shipping_price == 0) {
+            return FALSE;
+          }
 
           $rates[$shipping_service['name']] = array(
             'amount' => commerce_currency_decimal_to_amount($shipping_price, 'AUD'),
@@ -154,87 +158,110 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
 
 /**
  * Convenience function to get Australia Post codes for their services.
- * TODO: allow more options
  */
 function _commerce_australia_post_service_list() {
-  $services =  array(
-    // Domestic services
-    'AUS_SERVICE_OPTION_STANDARD'         => array('title'        => t('Regular Parcel, Standard'),
-                                                   'display_title'=> t('Standard Parcel Post'),
-                                                   'description'  => t('Australia Post - 2-5 Days'),
-                                                   'service_code' => 'AUS_PARCEL_REGULAR',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_STANDARD',
-                                                   'destination'  => 'domestic'),
-    'AUS_SERVICE_OPTION_SIGNATURE'        => array('title'        => t('Regular Parcel, Signature required'),
-                                                   'display_title'=> t('Std. Parcel Post, Signature required'),
-                                                   'description'  => t('Australia Post - 2-5 Days, Signature Required'),
-                                                   'service_code' => 'AUS_PARCEL_REGULAR',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
-                                                   'destination'  => 'domestic'),
-    'AUS_PARCEL_EXPRESS'                  => array('title'        => t('Express Post Parcel'),
-                                                   'display_title'=> t('Express Post Parcel'),
-                                                   'description'  => t('Australia Post - 1-3 Days'),
-                                                   'service_code' => 'AUS_PARCEL_EXPRESS',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_STANDARD',
-                                                   'destination'  => 'domestic'),
-    'AUS_PARCEL_EXPRESS_SIGNATURE'        => array('title'        => t('Express Post Parcel, Signature reqd'),
-                                                   'display_title'=> t('Express Post Parcel, Signature required'),
-                                                   'description'  => t('Australia Post - 1-3 Days, Signature Required'),
-                                                   'service_code' => 'AUS_PARCEL_EXPRESS',
-                                                   'option_code'  => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
-                                                   'destination'  => 'domestic'),
-    'AUS_PARCEL_COURIER'                  => array('title'        => t('Courier Post'),
-                                                   'display_title'=> t('Courier Post'),
-                                                   'description'  => t('Australia Post - Same Day Delivery'),
-                                                   'service_code' => 'AUS_PARCEL_COURIER',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'domestic'),
-    // International services
-    'INTL_SERVICE_ECI_PLATINUM'           => array('title'        => t('Express Courier International'),
-                                                   'display_title'=> t('Express Courier International'),
-                                                   'description'  => t('Australia Post - 1-2 Days'),
-                                                   'service_code' => 'INTL_SERVICE_ECI_PLATINUM',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_ECI_M'                  => array('title'        => t('Express Courier International Merch'),
-                                                   'display_title'=> t('Express Courier International Merchant'),
-                                                   'description'  => t('Australia Post - 2-4 Days'),
-                                                   'service_code' => 'INTL_SERVICE_ECI_M',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_EPI'                    => array('title'        => t('Express Post International'),
-                                                   'display_title'=> t('Express Post International'),
-                                                   'description'  => t('Australia Post - 3-7 Days'),
-                                                   'service_code' => 'INTL_SERVICE_EPI',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_RPI'                    => array('title'        => t('Registered Post International'),
-                                                   'display_title'=> t('Registered Post International'),
-                                                   'description'  => t('Australia Post - 3-10 Days'),
-                                                   'service_code' => 'INTL_SERVICE_RPI',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_PTI'                    => array('title'        => t('Pack and Track International'),
-                                                   'display_title'=> t('Pack and Track International'),
-                                                   'description'  => t('Australia Post - 3-10 Days'),
-                                                   'service_code' => 'INTL_SERVICE_PTI',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_AIR_MAIL'               => array('title'        => t('International Air Mail'),
-                                                   'display_title'=> t('International Air Mail'),
-                                                   'description'  => t('Australia Post - 3-10 Days'),
-                                                   'service_code' => 'INTL_SERVICE_AIR_MAIL',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
-    'INTL_SERVICE_SEA_MAIL'               => array('title'        => t('International Sea Mail'),
-                                                   'display_title'=> t('International Sea Mail'),
-                                                   'description'  => t('Australia Post - 2-3 Months'),
-                                                   'service_code' => 'INTL_SERVICE_SEA_MAIL',
-                                                   'option_code'  => '',
-                                                   'destination'  => 'international'),
+  $services = array(
+    // Domestic services.
+    'AUS_SERVICE_OPTION_STANDARD'  => array(
+                                        'title'         => t('Regular Parcel, Standard'),
+                                        'display_title' => t('Standard Parcel Post'),
+                                        'description'   => t('Australia Post - 2-5 Days'),
+                                        'service_code'  => 'AUS_PARCEL_REGULAR',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'destination'   => 'domestic',
+                                        ),
+    'AUS_SERVICE_OPTION_SIGNATURE' => array(
+                                        'title'         => t('Regular Parcel, Signature required'),
+                                        'display_title' => t('Std. Parcel Post, Signature required'),
+                                        'description'   => t('Australia Post - 2-5 Days, Signature Required'),
+                                        'service_code'  => 'AUS_PARCEL_REGULAR',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'destination'   => 'domestic',
+                                        ),
+    'AUS_PARCEL_EXPRESS'           => array(
+                                        'title'         => t('Express Post Parcel'),
+                                        'display_title' => t('Express Post Parcel'),
+                                        'description'   => t('Australia Post - 1-3 Days'),
+                                        'service_code'  => 'AUS_PARCEL_EXPRESS',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'destination'   => 'domestic',
+                                        ),
+    'AUS_PARCEL_EXPRESS_SIGNATURE' => array(
+                                        'title'         => t('Express Post Parcel, Signature reqd'),
+                                        'display_title' => t('Express Post Parcel, Signature required'),
+                                        'description'   => t('Australia Post - 1-3 Days, Signature Required'),
+                                        'service_code'  => 'AUS_PARCEL_EXPRESS',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'destination'   => 'domestic',
+                                        ),
+    'AUS_PARCEL_COURIER'           => array(
+                                        'title'         => t('Courier Post'),
+                                        'display_title' => t('Courier Post'),
+                                        'description'   => t('Australia Post - Same Day Delivery'),
+                                        'service_code'  => 'AUS_PARCEL_COURIER',
+                                        'option_code'   => '',
+                                        'destination'   => 'domestic',
+                                        ),
+    // International services.
+    'INTL_SERVICE_ECI_PLATINUM'    => array(
+                                        'title'         => t('Express Courier International'),
+                                        'display_title' => t('Express Courier International'),
+                                        'description'   => t('Australia Post - 1-2 Days'),
+                                        'service_code'  => 'INTL_SERVICE_ECI_PLATINUM',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_ECI_M'           => array(
+                                        'title'         => t('Express Courier International Merch'),
+                                        'display_title' => t('Express Courier International Merchant'),
+                                        'description'   => t('Australia Post - 2-4 Days'),
+                                        'service_code'  => 'INTL_SERVICE_ECI_M',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_EPI'            => array(
+                                        'title'         => t('Express Post International'),
+                                        'display_title' => t('Express Post International'),
+                                        'description'   => t('Australia Post - 3-7 Days'),
+                                        'service_code'  => 'INTL_SERVICE_EPI',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_RPI'             => array(
+                                        'title'         => t('Registered Post International'),
+                                        'display_title' => t('Registered Post International'),
+                                        'description'   => t('Australia Post - 3-10 Days'),
+                                        'service_code'  => 'INTL_SERVICE_RPI',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_PTI'             => array(
+                                        'title'         => t('Pack and Track International'),
+                                        'display_title' => t('Pack and Track International'),
+                                        'description'   => t('Australia Post - 3-10 Days'),
+                                        'service_code'  => 'INTL_SERVICE_PTI',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_AIR_MAIL'        => array(
+                                        'title'         => t('International Air Mail'),
+                                        'display_title' => t('International Air Mail'),
+                                        'description'   => t('Australia Post - 3-10 Days'),
+                                        'service_code'  => 'INTL_SERVICE_AIR_MAIL',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
+    'INTL_SERVICE_SEA_MAIL'        => array(
+                                        'title'         => t('International Sea Mail'),
+                                        'display_title' => t('International Sea Mail'),
+                                        'description'   => t('Australia Post - 2-3 Months'),
+                                        'service_code'  => 'INTL_SERVICE_SEA_MAIL',
+                                        'option_code'   => '',
+                                        'destination'   => 'international',
+                                        ),
   );
 
-  // Make a unique ID to identify the service by
+  // Make a unique ID to identify the service by.
   foreach ($services as $key => $service) {
     $service['slug'] = str_replace(' - ', '_', drupal_strtolower($service['title']));
     $service['slug'] = str_replace(' ', '_', $service['slug']);
@@ -245,10 +272,9 @@ function _commerce_australia_post_service_list() {
 }
 
 /**
- * Returns a computer friendly slug for a service code
+ * Returns a computer friendly slug for a service code.
  */
 function commerce_australia_post_commerce_shipping_service_name($service_code) {
   $service_names = _commerce_australia_post_service_list();
   return $service_names[$service_code]['slug'];
 }
-
