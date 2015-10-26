@@ -20,7 +20,9 @@ function commerce_australia_post_build_rate_request($order) {
     $shipping_address = $order_wrapper->{$field_name}->commerce_customer_address->value();
   }
   else {
-    $shipping_address = addressfield_default_values();
+    $field = field_info_field($field_name);
+    $instance = field_info_instance('commerce_customer_profile', 'commerce_customer_address', 'shipping');
+    $shipping_address = addressfield_default_values($field, $instance);
   }
 
   //FIXME: The following assumes everything is the same density and does not optimally pack
