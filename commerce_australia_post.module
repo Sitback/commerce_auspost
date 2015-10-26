@@ -87,66 +87,67 @@ function commerce_australia_post_service_rate_order($shipping_service, $order) {
   module_load_include('inc', 'commerce_australia_post', 'includes/commerce_australia_post.json');
 
   // First attempt to recover cached shipping rates for the current order.
-  $rates = commerce_shipping_rates_cache_get('australia_post', $order, variable_get('commerce_australia_post_rates_timeout', 0));
+  variable_set('commerce_australia_post_rates_timeout', 60); // set cache reload timeout to 60 seconds 
+  $rates = commerce_shipping_rates_cache_get('australia_post_' . $shipping_service['name'], $order, variable_get('commerce_australia_post_rates_timeout', 0));
 
   // If no rates were recovered from the cache
   // or the cached rates are over one minute old...
   if (!$rates) {
     $rates = array();
-  }
 
-  if (!in_array($shipping_service['name'], $rates)) {
-    // Build the rate request for the current order. This returns XML.
-    $rate_request = commerce_australia_post_build_rate_request($order);
+    if (!in_array($shipping_service['name'], $rates)) {
+      // Build the rate request for the current order. This returns XML.
+      $rate_request = commerce_australia_post_build_rate_request($order);
 
-    // If we got a valid rate request url back...
-    if (is_array($rate_request)) {
-      // Submit the API request to Australia Post.
-      $request_attributes = $rate_request['attributes'];
-      $request_attributes['service_code'] = $shipping_service['service_code'];
-      $request_attributes['option_code'] = $shipping_service['option_code'];
+      // If we got a valid rate request url back...
+      if (is_array($rate_request)) {
+        // Submit the API request to Australia Post.
+        $request_attributes = $rate_request['attributes'];
+        $request_attributes['service_code'] = $shipping_service['service_code'];
+        $request_attributes['option_code'] = $shipping_service['option_code'];
 
-      $destination = $shipping_service['destination'];
+        $destination = $shipping_service['destination'];
 
-      // Only test international methods for outside AU and vice versa.
-      if (($request_attributes['country_code'] != 'AU' &&
-          $destination == 'domestic') ||
-          ($request_attributes['country_code'] == 'AU' &&
-          $destination == 'international')) {
-        return FALSE;
-      }
+        // Only test international methods for outside AU and vice versa.
+        if (($request_attributes['country_code'] != 'AU' &&
+            $destination == 'domestic') ||
+            ($request_attributes['country_code'] == 'AU' &&
+            $destination == 'international')) {
+          return FALSE;
+        }
 
-      // Check we have the postcodes. If not, don't supply any auspost options.
-      // Australian postcodes will always be numeric.
-      if (!is_numeric($request_attributes['from_postcode'])) {
-        return FALSE;
-      }
-      // But international postcodes might contain characters (for example UK)
-      if (!isset($request_attributes['to_postcode'])) {
-        return FALSE;
-      }
+        // Check we have the postcodes. If not, don't supply any auspost options.
+        // Australian postcodes will always be numeric.
+        if (!is_numeric($request_attributes['from_postcode'])) {
+          return FALSE;
+        }
+        // But international postcodes might contain characters (for example UK)
+        if (!isset($request_attributes['to_postcode'])) {
+          return FALSE;
+        }
 
-      $response = commerce_australia_post_api_request($request_attributes, $destination);
+        $response = commerce_australia_post_api_request($request_attributes, $destination);
 
-      if (!empty($response->data)) {
-        // Parse $response to cache all requested rates for the current order.
-        $response_data = drupal_json_decode($response->data);
+        if (!empty($response->data)) {
+          // Parse $response to cache all requested rates for the current order.
+          $response_data = drupal_json_decode($response->data);
 
-        if (isset($response_data['postage_result'])) {
-          $shipping_price = ($response_data['postage_result']['total_cost'] * $rate_request['packages']);
+          if (isset($response_data['postage_result'])) {
+            $shipping_price = ($response_data['postage_result']['total_cost'] * $rate_request['packages']);
 
-          if ($shipping_price == 0) {
-            return FALSE;
+            if ($shipping_price == 0) {
+              return FALSE;
+            }
+
+            $rates[$shipping_service['name']] = array(
+              'amount' => commerce_currency_decimal_to_amount($shipping_price, 'AUD'),
+              'currency_code' => 'AUD',
+              'data' => array(),
+            );
+
+            // Cache the calculated rates for subsequent requests.
+            commerce_shipping_rates_cache_set('australia_post_' . $shipping_service['name'], $order, $rates);
           }
-
-          $rates[$shipping_service['name']] = array(
-            'amount' => commerce_currency_decimal_to_amount($shipping_price, 'AUD'),
-            'currency_code' => 'AUD',
-            'data' => array(),
-          );
-
-          // Cache the calculated rates for subsequent requests.
-          commerce_shipping_rates_cache_set('australia_post', $order, $rates);
         }
       }
     }
