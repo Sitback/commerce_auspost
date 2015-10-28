@@ -61,9 +61,23 @@ function commerce_australia_post_build_rate_request($order) {
   if ($volume['volume'] == NULL || $weight['weight'] == NULL) {
     return FALSE;
   }
+
+  // Ship To - Customer Shipping Address.
+  // Prepare the shipping address for use in the request.
+  if (!empty($order_wrapper->commerce_customer_shipping->commerce_customer_address)) {
+    $shipping_address = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
+  }
+  // Domestics shipments have a weight limit of 22kg
+  // International shipments have a weight limit of 20kg
+  if ($shipping_address['country'] == 'AU') {
+    $max_package_weight = 22;
+  }
+  else {
+    $max_package_weight = 20;
+  }
   // Determine the shipping profile reference field name for the order.
   $context = new PackagingContext();
-  $context->setMaximumPackageWeight(22);
+  $context->setMaximumPackageWeight($max_package_weight);
   $context->setMaximumPackageVolume($default_package_volume);
   $context->setDefaultWeightUnits('KG');
   $context->setDefaultLengthUnits('CM');
@@ -93,12 +107,6 @@ function commerce_australia_post_build_rate_request($order) {
   }
 
   $number_of_packages = count($packages);
-
-  // Ship To - Customer Shipping Address.
-  // Prepare the shipping address for use in the request.
-  if (!empty($order_wrapper->commerce_customer_shipping->commerce_customer_address)) {
-    $shipping_address = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
-  }
 
   foreach ($packages as $package) {
     $attributes[] = array(
