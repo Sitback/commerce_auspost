@@ -19,6 +19,8 @@ function commerce_australia_post_uninstall() {
     'commerce_australia_post_rates_timeout',
     'commerce_australia_post_show_description',
     'commerce_australia_post_log',
+    'commerce_australia_post_packaging_strategy',
+
   );
 
   foreach ($fields as $data) {

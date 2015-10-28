@@ -9,6 +9,8 @@
  * Implements hook_settings_form().
  */
 function commerce_australia_post_settings_form($form, &$form_state) {
+  drupal_load('module', 'packaging');
+
   $form['api'] = array(
     '#type' => 'fieldset',
     '#title' => t('auspost API credentials'),
@@ -83,6 +85,22 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#size' => 5,
     '#required' => TRUE,
     '#default_value' => variable_get('commerce_australia_post_default_package_size_height'),
+  );
+
+  // Use CTools to look for any modules which define packaging strategies.
+  $operations = packaging_get_strategies();
+  $options = array();
+  foreach ($operations as $id => $operation) {
+    $options[$id] = $operation['title'];
+  }
+
+  // Form to select packaging strategy.
+  $form['default_package_size']['commerce_australia_post_packaging_strategy'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Packaging strategy'),
+    '#default_value' => variable_get('commerce_australia_post_packaging_strategy', ''),
+    '#options'       => $options,
+    '#description'   => t('Select the packaging strategy that is most appropriate to the types of products you sell.'),
   );
   $form['default_package_size']['details'] = array(
     '#markup' => 'The package size is used to determine the number of packages necessary to
@@ -181,6 +199,7 @@ function commerce_australia_post_settings_form_submit($form, &$form_state) {
   variable_set('commerce_australia_post_default_package_size_height', $form_state['values']['commerce_australia_post_default_package_size_height']);
   variable_set('commerce_australia_post_show_description', $form_state['values']['commerce_australia_post_show_description']);
   variable_set('commerce_australia_post_log', $form_state['values']['commerce_australia_post_log']);
+  variable_set('commerce_australia_post_packaging_strategy', $form_state['values']['commerce_australia_post_packaging_strategy']);
 
   drupal_set_message(t('The Australia Post configuration options have been saved.'));
 }

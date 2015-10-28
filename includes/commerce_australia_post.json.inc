@@ -9,6 +9,21 @@
  * This builds the URL to submit to Australia Post for rates.
  */
 function commerce_australia_post_build_rate_request($order) {
+  drupal_load('module', 'packaging');
+  module_load_include('inc', 'packaging', 'classes/package');
+  module_load_include('inc', 'packaging', 'classes/product');
+  module_load_include('inc', 'packaging', 'classes/context');
+  module_load_include('inc', 'packaging', 'classes/strategy');
+  module_load_include('inc', 'commerce_australia_post', 'strategies/commerce_australia_post_last_fit_2d');
+  module_load_include('inc', 'packaging', 'strategies/package_each_in_own');
+  module_load_include('inc', 'packaging', 'strategies/package_all_in_one');
+  module_load_include('inc', 'packaging', 'strategies/package_last_fit');
+  module_load_include('inc', 'packaging', 'strategies/package_next_fit');
+  module_load_include('inc', 'packaging', 'strategies/package_one_package');
+  module_load_include('inc', 'packaging', 'strategies/package_average_volume');
+  module_load_include('inc', 'packaging', 'strategies/package_by_volume');
+  module_load_include('inc', 'packaging', 'strategies/package_average_weight');
+  module_load_include('inc', 'packaging', 'strategies/package_by_key');
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
 
   // Determine the shipping profile reference field name for the order.
@@ -46,8 +61,38 @@ function commerce_australia_post_build_rate_request($order) {
   if ($volume['volume'] == NULL || $weight['weight'] == NULL) {
     return FALSE;
   }
+  // Determine the shipping profile reference field name for the order.
+  $context = new PackagingContext();
+  $context->setMaximumPackageWeight(22);
+  $context->setMaximumPackageVolume($default_package_volume);
+  $context->setDefaultWeightUnits('KG');
+  $context->setDefaultLengthUnits('CM');
+  $strategy = packaging_get_instance(variable_get('commerce_australia_post_packaging_strategy', 'allinone'));
+  $context->setStrategy($strategy);
+  $products = array();
+  foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
+    $line_item_weight = commerce_physical_product_line_item_weight($line_item_wrapper->value());
+    $line_item_dimensions = commerce_physical_product_line_item_dimensions($line_item_wrapper->value());
+    $product = new PackagingProduct();
+    $product->type = $line_item_wrapper->type->value();
+    $product->model = $line_item_wrapper->line_item_label->value();
+    $product->setPrice((int) ($line_item_wrapper->commerce_unit_price->amount->value()));
+    $product->setWeight($line_item_weight['weight'] / $line_item_wrapper->quantity->value());
+    $product->setWeightUnits(strtoupper($line_item_weight['unit']));
+    $product->setDimensions($line_item_dimensions);
+    $product->setLengthUnits(strtoupper($line_item_dimensions['unit']));
+    $product->setPackageQuantity(1);
+    $product->setQuantity((int) ($line_item_wrapper->quantity->value()));
+    $product->shippable = TRUE;
+    $products[] = $product;
+  }
+  $packages = packaging_package_products($context, $products);
 
-  $number_of_packages = ceil($volume['volume'] / $default_package_volume);
+  if (!count($packages)) {
+    return FALSE;
+  }
+
+  $number_of_packages = count($packages);
 
   // Ship To - Customer Shipping Address.
   // Prepare the shipping address for use in the request.
@@ -55,30 +100,31 @@ function commerce_australia_post_build_rate_request($order) {
     $shipping_address = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
   }
 
-  $attributes = array();
-
-  $attributes['from_postcode'] = check_plain(variable_get('commerce_australia_post_postal_code'));
-  $attributes['to_postcode'] = check_plain($shipping_address['postal_code']);
-  $attributes['country_code'] = check_plain($shipping_address['country']);
-  $attributes['length'] = check_plain(variable_get('commerce_australia_post_default_package_size_length'));
-  $attributes['width'] = check_plain(variable_get('commerce_australia_post_default_package_size_width'));
-  $attributes['height'] = check_plain(variable_get('commerce_australia_post_default_package_size_height'));
-  $attributes['weight'] = $weight['weight'] / $number_of_packages;
-
+  foreach ($packages as $package) {
+    $attributes[] = array(
+      'from_postcode' => check_plain(variable_get('commerce_australia_post_postal_code')),
+      'to_postcode' => check_plain($shipping_address['postal_code']),
+      'country_code' => check_plain($shipping_address['country']),
+      'length' => check_plain(variable_get('commerce_australia_post_default_package_size_length')),
+      'width' => check_plain(variable_get('commerce_australia_post_default_package_size_width')),
+      'height' => check_plain(variable_get('commerce_australia_post_default_package_size_height')),
+      'weight' => $package->getWeight(),
+    );
+  }
   return array('packages' => $number_of_packages, 'attributes' => $attributes);
 }
 
 /**
- * Submits an API request to the Progistics XML Processor.
+ * Submits an API request to the Australia Post API.
  *
- * @param $xml
- *   An XML string to submit to the Progistics XML Processor.
+ * @param array $attributes
+ *   An array of packages to get quotes for.
+ * @param 
  */
-function commerce_australia_post_api_request($attributes, $destination = 'domestic') {
+function commerce_australia_post_api_request(array $attributes, $destination = 'domestic') {
 
   $url = 'https://auspost.com.au/api/postage/parcel/' . $destination . '/calculate.json';
   $url .= '?' . drupal_http_build_query($attributes);
-
   $options = array(
     'headers' => array('AUTH-KEY' => check_plain(variable_get('commerce_australia_post_api_key'))),
   );

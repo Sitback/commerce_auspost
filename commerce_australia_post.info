@@ -4,4 +4,5 @@ package = Commerce (shipping)
 dependencies[] = commerce
 dependencies[] = commerce_shipping (7.x-2.x)
 dependencies[] = commerce_physical
+dependencies[] = packaging
 core = 7.x
