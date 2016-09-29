@@ -8,7 +8,7 @@
 /**
  * Implements hook_settings_form().
  */
-function commerce_australia_post_settings_form($form, &$form_state) {
+function commerce_australia_post_settings_form(array $form, array &$form_state) {
   $form['api'] = array(
     '#type' => 'fieldset',
     '#title' => t('auspost API credentials'),
@@ -17,7 +17,8 @@ function commerce_australia_post_settings_form($form, &$form_state) {
                       array(
                         '!auspost' => l(t('auspost.com.au'),
                         'http://auspost.com.au/devcentre/pacpcs.asp',
-                          array('attributes' => array('target' => '_blank'))))
+                          array('attributes' => array('target' => '_blank'))),
+                      )
     ),
   );
 
@@ -48,20 +49,68 @@ function commerce_australia_post_settings_form($form, &$form_state) {
   );
 
   foreach (_commerce_australia_post_service_list() as $key => $service) {
-    $array_options[$key] = $service['title'];
+    if (($service['type'] == 'parcel') && ($service['destination'] == 'domestic')) {
+      $array_options[$key] = $service['title'];
+    }
   }
-  $form['services']['commerce_australia_post_services'] = array(
+  $form['services']['commerce_australia_post_dom_services'] = array(
+    '#title' => t('Domestic Parcel Services'),
     '#type' => 'checkboxes',
     '#options' => $array_options,
-    '#default_value' => variable_get('commerce_australia_post_services', array()),
+    '#default_value' => variable_get('commerce_australia_post_dom_services', array()),
+  );
+  $array_options = array();
+  foreach (_commerce_australia_post_service_list() as $key => $service) {
+    if (($service['type'] == 'parcel') && ($service['destination'] == 'international')) {
+      $array_options[$key] = $service['title'];
+    }
+  }
+  $form['services']['commerce_australia_post_int_services'] = array(
+    '#title' => t('International Parcel Services'),
+    '#type' => 'checkboxes',
+    '#options' => $array_options,
+    '#default_value' => variable_get('commerce_australia_post_int_services', array()),
+  );
+
+  $array_options = array();
+
+  $form['letters'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Enable Australia Post Letter Services'),
+    '#collapsible' => TRUE,
+    '#description' => t('<strong>NB. If multiple line items are order, each line item will be shipped in a separate envelope.</strong>'),
+
+  );
+  foreach (_commerce_australia_post_service_list() as $key => $service) {
+    if (($service['type'] == 'letter') && ($service['destination'] == 'domestic')) {
+      $array_options[$key] = $service['title'];
+    }
+  }
+  $form['letters']['commerce_australia_post_dom_letters'] = array(
+    '#title' => t('Domestic Letter Services'),
+    '#type' => 'checkboxes',
+    '#options' => $array_options,
+    '#default_value' => variable_get('commerce_australia_post_dom_letters', array()),
+  );
+  $array_options = array();
+  foreach (_commerce_australia_post_service_list() as $key => $service) {
+    if (($service['type'] == 'letter') && ($service['destination'] == 'international')) {
+      $array_options[$key] = $service['title'];
+    }
+  }
+  $form['letters']['commerce_australia_post_int_letters'] = array(
+    '#title' => t('International Letter Services'),
+    '#type' => 'checkboxes',
+    '#options' => $array_options,
+    '#default_value' => variable_get('commerce_australia_post_int_letters', array()),
   );
 
   // Fields for default package size (cm).
   $form['default_package_size'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Default maximum package size (cm)'),
+    '#title' => t('Default/Maximum package size (cm)'),
     '#collapsible' => FALSE,
-    '#description' => t('Australia Post requires a package size when determining estimates.'),
+    '#description' => t('Australia Post requires a package size when determining estimates for parcel services.'),
   );
   $form['default_package_size']['commerce_australia_post_default_package_size_length'] = array(
     '#type' => 'textfield',
@@ -69,6 +118,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#size' => 5,
     '#required' => TRUE,
     '#default_value' => variable_get('commerce_australia_post_default_package_size_length'),
+    '#field_suffix' => 'cm',
   );
   $form['default_package_size']['commerce_australia_post_default_package_size_width'] = array(
     '#type' => 'textfield',
@@ -76,6 +126,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#size' => 5,
     '#required' => TRUE,
     '#default_value' => variable_get('commerce_australia_post_default_package_size_width'),
+    '#field_suffix' => 'cm',
   );
   $form['default_package_size']['commerce_australia_post_default_package_size_height'] = array(
     '#type' => 'textfield',
@@ -83,6 +134,12 @@ function commerce_australia_post_settings_form($form, &$form_state) {
     '#size' => 5,
     '#required' => TRUE,
     '#default_value' => variable_get('commerce_australia_post_default_package_size_height'),
+    '#field_suffix' => 'cm',
+  );
+  $form['default_package_size']['commerce_australia_post_default_package'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use variable package sizes up to maximum size'),
+    '#default_value' => variable_get('commerce_australia_post_default_package', FALSE),
   );
   $form['default_package_size']['details'] = array(
     '#markup' => 'The package size is used to determine the number of packages necessary to
@@ -92,6 +149,30 @@ function commerce_australia_post_settings_form($form, &$form_state) {
       <li>Pack them into the smallest box possible filling up the maximum size first.</li>
       </ul>',
   );
+  // Fields for default package size (cm).
+  $form['insurance'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Shipment Insurance'),
+    '#collapsible' => FALSE,
+    '#description' => t('Australia Post offers insurance on shipments.'),
+  );
+  $form['insurance']['commerce_australia_post_insurance'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Insurance - Percentage of order value'),
+    '#size' => 5,
+    '#required' => TRUE,
+    '#default_value' => variable_get('commerce_australia_post_insurance'),
+    '#field_suffix' => '%',
+  );
+  $form['insurance']['commerce_australia_post_insurance_limit'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Limit insurance value to Australia Posts Insurance Limit'),
+    '#default_value' => variable_get('commerce_australia_post_insurance_limit', FALSE),
+  );
+  $form['insurance']['detail'] = array(
+    '#markup' => t('<strong>** WARNING - Enabling this will limit the insurance to $300 for domestic standard services and $5000 for domestic confirmed services and international services.</strong><br>Disabling this will cause Australia Post to reject services where the insurance value is greater than these limit.'),
+  );
+
   $form['advanced_options'] = array(
     '#type' => 'fieldset',
     '#title' => t('Advanced settings'),
@@ -123,7 +204,7 @@ function commerce_australia_post_settings_form($form, &$form_state) {
 /**
  * Implements hook_form_validate().
  */
-function commerce_australia_post_settings_form_validate($form, &$form_state) {
+function commerce_australia_post_settings_form_validate(array $form, array &$form_state) {
 
   $values = $form_state['values'];
 
@@ -142,10 +223,10 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
 
   // Ensure the default package size is less than the maximum.
   $dimensions = array(
-                  $values['commerce_australia_post_default_package_size_length'],
-                  $values['commerce_australia_post_default_package_size_width'],
-                  $values['commerce_australia_post_default_package_size_height']
-                );
+    $values['commerce_australia_post_default_package_size_length'],
+    $values['commerce_australia_post_default_package_size_width'],
+    $values['commerce_australia_post_default_package_size_height'],
+  );
   sort($dimensions);
   list($height, $width, $length) = $dimensions;
   $girth = 2 * $width + 2 * $height;
@@ -160,13 +241,22 @@ function commerce_australia_post_settings_form_validate($form, &$form_state) {
 /**
  * Implements hook_form_submit().
  */
-function commerce_australia_post_settings_form_submit($form, &$form_state) {
+function commerce_australia_post_settings_form_submit(array $form, array &$form_state) {
 
-  $services = variable_get('commerce_australia_post_services', NULL);
-
+  $services = variable_get('commerce_australia_post_dom_services', array());
+  $services = array_merge($services, variable_get('commerce_australia_post_int_services', array()));
+  $services = array_merge($services, variable_get('commerce_australia_post_dom_letters', array()));
+  $services = array_merge($services, variable_get('commerce_australia_post_int_letters', array()));
+  $form_services = $form_state['values']['commerce_australia_post_dom_services'];
+  $form_services = array_merge($form_services, $form_state['values']['commerce_australia_post_int_services']);
+  $form_services = array_merge($form_services, $form_state['values']['commerce_australia_post_dom_letters']);
+  $form_services = array_merge($form_services, $form_state['values']['commerce_australia_post_int_letters']);
   // If the selected services have changed then rebuild caches.
-  if ($services !== $form_state['values']['commerce_australia_post_services']) {
-    variable_set('commerce_australia_post_services', $form_state['values']['commerce_australia_post_services']);
+  if ($services !== $form_services) {
+    variable_set('commerce_australia_post_dom_services', $form_state['values']['commerce_australia_post_dom_services']);
+    variable_set('commerce_australia_post_int_services', $form_state['values']['commerce_australia_post_int_services']);
+    variable_set('commerce_australia_post_dom_letters', $form_state['values']['commerce_australia_post_dom_letters']);
+    variable_set('commerce_australia_post_int_letters', $form_state['values']['commerce_australia_post_int_letters']);
 
     commerce_shipping_services_reset();
     entity_defaults_rebuild();
@@ -176,11 +266,14 @@ function commerce_australia_post_settings_form_submit($form, &$form_state) {
 
   variable_set('commerce_australia_post_api_key', $form_state['values']['commerce_australia_post_api_key']);
   variable_set('commerce_australia_post_postal_code', $form_state['values']['commerce_australia_post_postal_code']);
+  variable_set('commerce_australia_post_default_package', $form_state['values']['commerce_australia_post_default_package']);
   variable_set('commerce_australia_post_default_package_size_length', $form_state['values']['commerce_australia_post_default_package_size_length']);
   variable_set('commerce_australia_post_default_package_size_width', $form_state['values']['commerce_australia_post_default_package_size_width']);
   variable_set('commerce_australia_post_default_package_size_height', $form_state['values']['commerce_australia_post_default_package_size_height']);
   variable_set('commerce_australia_post_show_description', $form_state['values']['commerce_australia_post_show_description']);
   variable_set('commerce_australia_post_log', $form_state['values']['commerce_australia_post_log']);
+  variable_set('commerce_australia_post_insurance', $form_state['values']['commerce_australia_post_insurance']);
+  variable_set('commerce_australia_post_insurance_limit', $form_state['values']['commerce_australia_post_insurance_limit']);
 
   drupal_set_message(t('The Australia Post configuration options have been saved.'));
 }

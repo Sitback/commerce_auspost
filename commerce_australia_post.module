@@ -9,8 +9,6 @@
  * Implements hook_menu().
  */
 function commerce_australia_post_menu() {
-  $items = array();
-
   $items['admin/commerce/config/shipping/methods/australia-post/edit'] = array(
     'title' => 'Edit',
     'description' => 'Configure the Australia Post shipping method.',
@@ -22,7 +20,6 @@ function commerce_australia_post_menu() {
     'context' => MENU_CONTEXT_INLINE,
     'weight' => 0,
   );
-
   return $items;
 }
 
@@ -47,7 +44,10 @@ function commerce_australia_post_commerce_shipping_service_info() {
   $shipping_services = array();
 
   $available_services = _commerce_australia_post_service_list();
-  $selected_services = variable_get('commerce_australia_post_services', array());
+  $selected_services = variable_get('commerce_australia_post_dom_services', array());
+  $selected_services = array_merge($selected_services, variable_get('commerce_australia_post_int_services', array()));
+  $selected_services = array_merge($selected_services, variable_get('commerce_australia_post_dom_letters', array()));
+  $selected_services = array_merge($selected_services, variable_get('commerce_australia_post_int_letters', array()));
 
   foreach ($selected_services as $id => $val) {
     // If you find a selected one...
@@ -60,10 +60,13 @@ function commerce_australia_post_commerce_shipping_service_info() {
         $description = '';
       }
       $shipping_services[$service['slug']] = array(
+        'type' => $service['type'],
         'title' => $service['title'],
         'description' => $description,
         'service_code' => $service['service_code'],
         'option_code' => $service['option_code'],
+        'suboption_code' => $service['sub_opt_code'],
+        'extra_cover' => $service['extra_cover'],
         'destination' => $service['destination'],
         'display_title' => $service['display_title'],
         'shipping_method' => 'australia_post',
@@ -72,6 +75,17 @@ function commerce_australia_post_commerce_shipping_service_info() {
           'rate' => 'commerce_australia_post_service_rate_order',
         ),
       );
+      if (array_key_exists('max_dimensions', $service)) {
+        $dimensions = array(
+          'max_dimensions' => array(
+            'length' => $service['max_dimensions']['length'],
+            'width' => $service['max_dimensions']['width'],
+            'thickness' => $service['max_dimensions']['thickness'],
+            'weight' => $service['max_dimensions']['weight'],
+          ),
+        );
+        $shipping_services[$service['slug']] = array_merge($shipping_services[$service['slug']], $dimensions);
+      }
     }
   }
 
@@ -79,80 +93,141 @@ function commerce_australia_post_commerce_shipping_service_info() {
 }
 
 /**
- * Shipping service callback:
- * returns a base price array for a shipping service
- * calculated for the given order.
+ * Returns a base price array for a shipping service for the given order.
+ *
+ * @param array $shipping_service
+ *   Array of shipping service info to be rated.
+ * @param object $order
+ *   Object of order to be rated.
+ *
+ * @return array
+ *   Array containing the rate and currency for selected service
  */
-function commerce_australia_post_service_rate_order($shipping_service, $order) {
+function commerce_australia_post_service_rate_order(array $shipping_service, stdClass $order) {
   module_load_include('inc', 'commerce_australia_post', 'includes/commerce_australia_post.json');
-
-  // First attempt to recover cached shipping rates for the current order.
-  variable_set('commerce_australia_post_rates_timeout', 60); // set cache reload timeout to 60 seconds 
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  // Set cache reload timeout to 60 seconds.
+  variable_set('commerce_australia_post_rates_timeout', 60);
+  // First, attempt to recover cached shipping rates for the current order.
   $rates = commerce_shipping_rates_cache_get('australia_post_' . $shipping_service['name'], $order, variable_get('commerce_australia_post_rates_timeout', 0));
-
+//  if (!empty($order_wrapper->commerce_customer_shipping->commerce_customer_address)) {
+//    $shipping_address = $order_wrapper->commerce_customer_shipping->commerce_customer_address->value();
+//  }
   // If no rates were recovered from the cache
   // or the cached rates are over one minute old...
   if (!$rates) {
     $rates = array();
-
     if (!in_array($shipping_service['name'], $rates)) {
       // Build the rate request for the current order. This returns XML.
-      $rate_request = commerce_australia_post_build_rate_request($order);
+      $rate_request = commerce_australia_post_build_rate_request($order, $shipping_service);
+      if ($rate_request == FALSE) {
+        return FALSE;
+      }
+      $total_rates = 0;
+      $number_of_packages = $rate_request['packages'];
+      $package_number = 1;
+      $shipping_price = 0;
+      $shipping_failed = FALSE;
+      for ($i = 1; $package_number <= $number_of_packages; $i++) {
+        // If we got a valid rate request url back...
+        if (is_array($rate_request)) {
+          // Submit the API request to Australia Post.
+          $request_attributes['from_postcode'] = $rate_request['attributes'][$i - 1]['from_postcode'];
+          $request_attributes['to_postcode'] = $rate_request['attributes'][$i - 1]['to_postcode'];
+          $request_attributes['country_code'] = $rate_request['attributes'][$i - 1]['country_code'];
+          if ($shipping_service['type'] == 'parcel') {
+            $request_attributes['length'] = $rate_request['attributes'][$i - 1]['pieces']['length'];
+            $request_attributes['width'] = $rate_request['attributes'][$i - 1]['pieces']['width'];
+            $request_attributes['height'] = $rate_request['attributes'][$i - 1]['pieces']['height'];
+          }
+          $request_attributes['weight'] = $rate_request['attributes'][$i - 1]['pieces']['weight'];
+          $request_attributes['service_code'] = $shipping_service['service_code'];
+          if (!empty($shipping_service['option_code'])) {
+            $request_attributes['option_code'] = $shipping_service['option_code'];
+          }
+          // If suboption_code is empty then dont send as its optional.
+          if (!empty($shipping_service['suboption_code'])) {
+            $request_attributes['suboption_code'] = $shipping_service['suboption_code'];
+          }
 
-      // If we got a valid rate request url back...
-      if (is_array($rate_request)) {
-        // Submit the API request to Australia Post.
-        $request_attributes = $rate_request['attributes'];
-        $request_attributes['service_code'] = $shipping_service['service_code'];
-        $request_attributes['option_code'] = $shipping_service['option_code'];
-
-        $destination = $shipping_service['destination'];
-
-        // Only test international methods for outside AU and vice versa.
-        if (($request_attributes['country_code'] != 'AU' &&
-            $destination == 'domestic') ||
-            ($request_attributes['country_code'] == 'AU' &&
-            $destination == 'international')) {
-          return FALSE;
-        }
-
-        // Check we have the postcodes. If not, don't supply any auspost options.
-        // Australian postcodes will always be numeric.
-        if (!is_numeric($request_attributes['from_postcode'])) {
-          return FALSE;
-        }
-        // But international postcodes might contain characters (for example UK)
-        if (!isset($request_attributes['to_postcode'])) {
-          return FALSE;
-        }
-
-        $response = commerce_australia_post_api_request($request_attributes, $destination);
-
-        if (!empty($response->data)) {
-          // Parse $response to cache all requested rates for the current order.
-          $response_data = drupal_json_decode($response->data);
-
-          if (isset($response_data['postage_result'])) {
-            $shipping_price = ($response_data['postage_result']['total_cost'] * $rate_request['packages']);
-
-            if ($shipping_price == 0) {
-              return FALSE;
+          if ($shipping_service['extra_cover'] > 0) {
+            if ($shipping_service['destination'] == 'domestic') {
+              $request_attributes['suboption_code'] = 'AUS_SERVICE_OPTION_EXTRA_COVER';
             }
+            // Determine extra_cover amount per package based on
+            // percentage set on admin page.
+            if ($shipping_service['type'] == 'parcel') {
+              $order_weight = commerce_physical_order_weight($order, 'kg');
+              $package_weight = ($rate_request['attributes'][$i - 1]['pieces']['weight']);
+              $insurance_value = round(((($order_wrapper->commerce_order_total->amount->value() *
+                                          ($package_weight / $order_weight['weight'])) *
+                                          check_plain(variable_get('commerce_australia_post_insurance'))) / 10000), 0);
+            }
+            else {
+              $insurance_value = round(((($order_wrapper->commerce_order_total->amount->value() /
+                                          $rate_request['packages']) *
+                                          check_plain(variable_get('commerce_australia_post_insurance'))) / 10000), 0);
+            }
+            // If insurance_value exceeds the maximum allowed Australia Post
+            // insurance for this service and the insurance limiting is
+            // enabled, set the insurance to the maximum allowed.
+            if (($insurance_value > $shipping_service['extra_cover']) &&
+                (variable_get('commerce_australia_post_insurance_limit'))) {
+              $insurance_value = $shipping_service['extra_cover'];
+            }
+            $request_attributes['extra_cover'] = $insurance_value;
+          }
 
-            $rates[$shipping_service['name']] = array(
-              'amount' => commerce_currency_decimal_to_amount($shipping_price, 'AUD'),
-              'currency_code' => 'AUD',
-              'data' => array(),
-            );
+          // Make sure we only test international methods for outside AU
+          // and vice versa.
+          if (($request_attributes['country_code'] != 'AU' &&
+                $shipping_service['destination'] == 'domestic') ||
+               ($request_attributes['country_code'] == 'AU' &&
+                $shipping_service['destination'] == 'international')) {
+            return FALSE;
+          }
 
-            // Cache the calculated rates for subsequent requests.
-            commerce_shipping_rates_cache_set('australia_post_' . $shipping_service['name'], $order, $rates);
+          // Check we have the postcodes. If not, don't supply any auspost
+          // options. Australian shipper postcodes will always be numeric.
+          if (!is_numeric($request_attributes['from_postcode'])) {
+            return FALSE;
+          }
+          // But international postcodes might contain characters
+          // (for example UK).
+          if (!isset($request_attributes['to_postcode'])) {
+            return FALSE;
+          }
+
+          $response = commerce_australia_post_api_request($request_attributes, $shipping_service);
+          if (!empty($response->data)) {
+            // Parse $response to cache all requested rates for the
+            // current order.
+            $response_data = drupal_json_decode($response->data);
+
+            if (isset($response_data['postage_result'])) {
+              $shipping_price = ($response_data['postage_result']['total_cost']);
+            }
+            else {
+              $shipping_failed = TRUE;
+            }
           }
         }
+        if ($shipping_failed == TRUE) {
+          return FALSE;
+        }
+        $total_rates += $shipping_price;
+        ++$package_number;
       }
+
+      $rates[$shipping_service['name']] = array(
+        'amount' => commerce_currency_decimal_to_amount($total_rates, 'AUD'),
+        'currency_code' => 'AUD',
+        'data' => array(),
+      );
+      // Cache the calculated rates for subsequent requests.
+      commerce_shipping_rates_cache_set('australia_post_' . $shipping_service['name'], $order, $rates);
     }
   }
-
   // Return the rate for the requested service or FALSE if not found.
   return isset($rates[$shipping_service['name']]) ? $rates[$shipping_service['name']] : FALSE;
 }
@@ -164,101 +239,777 @@ function _commerce_australia_post_service_list() {
   $services = array(
     // Domestic services.
     'AUS_SERVICE_OPTION_STANDARD'  => array(
-                                        'title'         => t('Regular Parcel, Standard'),
-                                        'display_title' => t('Standard Parcel Post'),
-                                        'description'   => t('Australia Post - 2-5 Days'),
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Regular, Standard'),
+                                        'display_title' => t('Standard Post'),
+                                        'description'   => t('Australia Post - 2-6 Days'),
                                         'service_code'  => 'AUS_PARCEL_REGULAR',
                                         'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
-                                        'destination'   => 'domestic',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
                                         ),
     'AUS_SERVICE_OPTION_SIGNATURE' => array(
-                                        'title'         => t('Regular Parcel, Signature required'),
-                                        'display_title' => t('Std. Parcel Post, Signature required'),
-                                        'description'   => t('Australia Post - 2-5 Days, Signature Required'),
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Regular, Signature required'),
+                                        'display_title' => t('Standard Post, Signature required'),
+                                        'description'   => t('Australia Post - 2-6 Days'),
                                         'service_code'  => 'AUS_PARCEL_REGULAR',
                                         'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'AUS_SERVICE_OPTION_INS'       => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'domestic',
+                                        'title'         => t('Regular, Insured'),
+                                        'display_title' => t('Standard Post (Insured)'),
+                                        'description'   => t('Australia Post - 2-6 Days'),
+                                        'service_code'  => 'AUS_PARCEL_REGULAR',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'  => 'AUS_SERVICE_OPTION_EXTRA_COVER',
+                                        'extra_cover'   => 300,
+                                        ),
+    'AUS_SERVICE_OPTION_SIG_INS'   => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Regular, Signature required, Insured'),
+                                        'display_title' => t('Standard Post (Insured), Signature required'),
+                                        'description'   => t('Australia Post - 2-6 Days'),
+                                        'service_code'  => 'AUS_PARCEL_REGULAR',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => 'AUS_SERVICE_OPTION_EXTRA_COVER',
+                                        'extra_cover'   => 5000,
                                         ),
     'AUS_PARCEL_EXPRESS'           => array(
-                                        'title'         => t('Express Post Parcel'),
-                                        'display_title' => t('Express Post Parcel'),
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Express Post'),
+                                        'display_title' => t('Express Post'),
                                         'description'   => t('Australia Post - 1-3 Days'),
                                         'service_code'  => 'AUS_PARCEL_EXPRESS',
                                         'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
-                                        'destination'   => 'domestic',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
                                         ),
     'AUS_PARCEL_EXPRESS_SIGNATURE' => array(
-                                        'title'         => t('Express Post Parcel, Signature reqd'),
-                                        'display_title' => t('Express Post Parcel, Signature required'),
-                                        'description'   => t('Australia Post - 1-3 Days, Signature Required'),
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Express Post, Signature required'),
+                                        'display_title' => t('Express Post, Signature required'),
+                                        'description'   => t('Australia Post - 1-3 Days'),
                                         'service_code'  => 'AUS_PARCEL_EXPRESS',
                                         'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'AUS_PARCEL_EXPRESS_INS'       => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'domestic',
+                                        'title'         => t('Express Post, Insured'),
+                                        'display_title' => t('Express Post (Insured)'),
+                                        'description'   => t('Australia Post - 1-3 Days'),
+                                        'service_code'  => 'AUS_PARCEL_EXPRESS',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'  => 'AUS_SERVICE_OPTION_EXTRA_COVER',
+                                        'extra_cover'   => 300,
+                                        ),
+    'AUS_PARCEL_EXPRESS_SIG_INS'   => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
+                                        'title'         => t('Express Post, Signature reqd, Insured'),
+                                        'display_title' => t('Express Post (Insured), Signature required'),
+                                        'description'   => t('Australia Post - 1-3 Days'),
+                                        'service_code'  => 'AUS_PARCEL_EXPRESS',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => 'AUS_SERVICE_OPTION_EXTRA_COVER',
+                                        'extra_cover'   => 5000,
                                         ),
     'AUS_PARCEL_COURIER'           => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'domestic',
                                         'title'         => t('Courier Post'),
                                         'display_title' => t('Courier Post'),
                                         'description'   => t('Australia Post - Same Day Delivery'),
                                         'service_code'  => 'AUS_PARCEL_COURIER',
-                                        'option_code'   => '',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'AUS_PARCEL_COUR_INS'          => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'domestic',
+                                        'title'         => t('Courier Post, Insured'),
+                                        'display_title' => t('Courier Post (Insured)'),
+                                        'description'   => t('Australia Post - Same Day Delivery'),
+                                        'service_code'  => 'AUS_PARCEL_COURIER',
+                                        'option_code'   => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'  => 'AUS_SERVICE_OPTION_EXTRA_COVER',
+                                        'extra_cover'   => 5000,
                                         ),
     // International services.
-    'INTL_SERVICE_ECI_PLATINUM'    => array(
-                                        'title'         => t('Express Courier International'),
-                                        'display_title' => t('Express Courier International'),
-                                        'description'   => t('Australia Post - 1-2 Days'),
-                                        'service_code'  => 'INTL_SERVICE_ECI_PLATINUM',
-                                        'option_code'   => '',
+    'INT_PARCEL_SEA_OWN_PACKAGING' => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'international',
+                                        'title'         => t('Int Economy Sea'),
+                                        'display_title' => t('International Economy Sea'),
+                                        'description'   => t('Australia Post - 30+ Days'),
+                                        'service_code'  => 'INT_PARCEL_SEA_OWN_PACKAGING',
+                                        'option_code'   => '',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
                                         ),
-    'INTL_SERVICE_ECI_M'           => array(
-                                        'title'         => t('Express Courier International Merch'),
-                                        'display_title' => t('Express Courier International Merchant'),
+    'INT_PARCEL_SEA_OWN_PACK_SIG'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Sea, Signature required'),
+                                        'display_title' => t('International Economy Sea, Signature required'),
+                                        'description'   => t('Australia Post - 30+ Days'),
+                                        'service_code'  => 'INT_PARCEL_SEA_OWN_PACKAGING',
+                                        'option_code'   => 'INT_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'INT_PARCEL_SEA_OWN_PACK_INS'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Sea, Insured'),
+                                        'display_title' => t('International Economy Sea (Insured)'),
+                                        'description'   => t('Australia Post - 30+ Days'),
+                                        'service_code'  => 'INT_PARCEL_SEA_OWN_PACKAGING',
+                                        'option_code'   => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+/* Not currently working AusPost issue
+    'INT_PAR_SEA_OWN_PACK_SIG_INS'=>   array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Sea, Signature Reqd, Insured'),
+                                        'display_title' => t('International Economy Sea (Insured), Signature required'),
+                                        'description'   => t('Australia Post - 30+ Days'),
+                                        'service_code'  => 'INT_PARCEL_SEA_OWN_PACKAGING',
+                                        'option_code'   => array(
+                                          '0'           => 'INT_SIGNATURE_ON_DELIVERY',
+                                          '1'           => 'INT_EXTRA_COVER',
+                                          ),
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+ */
+    'INT_PARCEL_AIR_OWN_PACKAGING' => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Air'),
+                                        'display_title' => t('International Economy Air'),
+                                        'description'   => t('Australia Post - 10+ Days'),
+                                        'service_code'  => 'INT_PARCEL_AIR_OWN_PACKAGING',
+                                        'option_code'   => '',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'INT_PARCEL_AIR_OWN_PACK_SIG'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Air, Signature required'),
+                                        'display_title' => t('International Economy Air, Signature required'),
+                                        'description'   => t('Australia Post - 10+ Days'),
+                                        'service_code'  => 'INT_PARCEL_AIR_OWN_PACKAGING',
+                                        'option_code'   => 'INT_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'INT_PARCEL_AIR_OWN_PACK_INS'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Air, Insured'),
+                                        'display_title' => t('International Economy Air (Insured)'),
+                                        'description'   => t('Australia Post - 10+ Days'),
+                                        'service_code'  => 'INT_PARCEL_AIR_OWN_PACKAGING',
+                                        'option_code'   => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+/* Not currently working AusPost issue
+    'INT_PAR_AIR_OWN_PACK_SIG_INS' => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Economy Air, Signature Reqd, Insured'),
+                                        'display_title' => t('International Economy Air (Insured), Signature required'),
+                                        'description'   => t('Australia Post - 10+ Days'),
+                                        'service_code'  => 'INT_PARCEL_AIR_OWN_PACKAGING',
+                                        'option_code'   => array(
+                                          '0'           => 'INT_SIGNATURE_ON_DELIVERY',
+                                          '1'           => 'INT_EXTRA_COVER',
+                                          ),
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+ */
+    'INT_PARCEL_STD_OWN_PACKAGING' => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Standard'),
+                                        'display_title' => t('International Standard'),
+                                        'description'   => t('Australia Post - 6+ Days'),
+                                        'service_code'  => 'INT_PARCEL_STD_OWN_PACKAGING',
+                                        'option_code'   => '',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'INT_PARCEL_STD_OWN_PACK_SIG'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Standard, Signature required'),
+                                        'display_title' => t('International Standard, Signature required'),
+                                        'description'   => t('Australia Post - 6+ Days'),
+                                        'service_code'  => 'INT_PARCEL_STD_OWN_PACKAGING',
+                                        'option_code'   => 'INT_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
+                                        ),
+    'INT_PARCEL_STD_OWN_PACK_INS'  => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Standard, Insured'),
+                                        'display_title' => t('International Standard (Insured)'),
+                                        'description'   => t('Australia Post - 6+ Days'),
+                                        'service_code'  => 'INT_PARCEL_STD_OWN_PACKAGING',
+                                        'option_code'   => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+/* Not currently working AusPost issue
+    'INT_PAR_STD_OWN_PACK_SIG_INS' => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Standard, Signature Reqd, Insured'),
+                                        'display_title' => t('International Standard (Insured), Signature Required'),
+                                        'description'   => t('Australia Post - 6+ Days'),
+                                        'service_code'  => 'INT_PARCEL_STD_OWN_PACKAGING',
+                                        'option_code'   => array(
+                                          '0'           => 'INT_SIGNATURE_ON_DELIVERY',
+                                          '1'           => 'INT_EXTRA_COVER',
+                                          ),
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
+                                        ),
+ */
+    'INT_PARCEL_EXP_OWN_PACKAGING' => array(
+                                        'type'          => 'parcel',
+                                        'destination'   => 'international',
+                                        'title'         => t('Int Express'),
+                                        'display_title' => t('International Express'),
                                         'description'   => t('Australia Post - 2-4 Days'),
-                                        'service_code'  => 'INTL_SERVICE_ECI_M',
+                                        'service_code'  => 'INT_PARCEL_EXP_OWN_PACKAGING',
                                         'option_code'   => '',
-                                        'destination'   => 'international',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
                                         ),
-    'INTL_SERVICE_EPI'            => array(
-                                        'title'         => t('Express Post International'),
-                                        'display_title' => t('Express Post International'),
-                                        'description'   => t('Australia Post - 3-7 Days'),
-                                        'service_code'  => 'INTL_SERVICE_EPI',
-                                        'option_code'   => '',
+    'INT_PARCEL_EXP_OWN_PACK_INS'   => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'international',
+                                        'title'         => t('Int Express, Insured'),
+                                        'display_title' => t('International Express (Insured)'),
+                                        'description'   => t('Australia Post - 2-4 Days'),
+                                        'service_code'  => 'INT_PARCEL_EXP_OWN_PACKAGING',
+                                        'option_code'   => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
                                         ),
-    'INTL_SERVICE_RPI'             => array(
-                                        'title'         => t('Registered Post International'),
-                                        'display_title' => t('Registered Post International'),
-                                        'description'   => t('Australia Post - 3-10 Days'),
-                                        'service_code'  => 'INTL_SERVICE_RPI',
-                                        'option_code'   => '',
+    'INT_PARCEL_COR_OWN_PACKAGING'    => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'international',
+                                        'title'         => t('Int Courier'),
+                                        'display_title' => t('International Courier'),
+                                        'description'   => t('Australia Post - 1-2 Days'),
+                                        'service_code'  => 'INT_PARCEL_COR_OWN_PACKAGING',
+                                        'option_code'   => '',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 0,
                                         ),
-    'INTL_SERVICE_PTI'             => array(
-                                        'title'         => t('Pack and Track International'),
-                                        'display_title' => t('Pack and Track International'),
-                                        'description'   => t('Australia Post - 3-10 Days'),
-                                        'service_code'  => 'INTL_SERVICE_PTI',
-                                        'option_code'   => '',
+    'INT_PARCEL_COR_OWN_PACK_INS'   => array(
+                                        'type'          => 'parcel',
                                         'destination'   => 'international',
+                                        'title'         => t('Int Courier, Insured'),
+                                        'display_title' => t('International Courier (Insured)'),
+                                        'description'   => t('Australia Post - 1-2 Days'),
+                                        'service_code'  => 'INT_PARCEL_COR_OWN_PACKAGING',
+                                        'option_code'   => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'  => '',
+                                        'extra_cover'   => 5000,
                                         ),
-    'INTL_SERVICE_AIR_MAIL'        => array(
-                                        'title'         => t('International Air Mail'),
-                                        'display_title' => t('International Air Mail'),
-                                        'description'   => t('Australia Post - 3-10 Days'),
-                                        'service_code'  => 'INTL_SERVICE_AIR_MAIL',
-                                        'option_code'   => '',
-                                        'destination'   => 'international',
+    // Domestic Letter services.
+    'L_AUS_LETTER_SM'                => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Standard Letter Small'),
+                                        'display_title'   => t('Standard Letter'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 5,
+                                          'weight'        => 250,
+                                          ),
                                         ),
-    'INTL_SERVICE_SEA_MAIL'        => array(
-                                        'title'         => t('International Sea Mail'),
-                                        'display_title' => t('International Sea Mail'),
-                                        'description'   => t('Australia Post - 2-3 Months'),
-                                        'service_code'  => 'INTL_SERVICE_SEA_MAIL',
-                                        'option_code'   => '',
-                                        'destination'   => 'international',
+    'L_AUS_LETTER_SM_PRIORITY'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Standard Letter Small Priority'),
+                                        'display_title'   => t('Standard Letter Priority'),
+                                        'description'     => t('Australia Post - 1-4 Days'),
+                                        'service_code'    => 'AUS_LETTER_PRIORITY_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 5,
+                                          'weight'        => 250,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG'                => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Standard Letter Large'),
+                                        'display_title'   => t('Standard Letter'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG_PRIORITY'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Standard Letter Large Priority'),
+                                        'display_title'   => t('Standard Letter Priority'),
+                                        'description'     => t('Australia Post - 1-4 Days'),
+                                        'service_code'    => 'AUS_LETTER_PRIORITY_LARGE_500',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_SM_REG_POST'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post Small'),
+                                        'display_title'   => t('Registered Post Letter'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_SM_REG_CONF'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post Small - Conf'),
+                                        'display_title'   => t('Registered Post Letter - Confirmation'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => 'AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_SM_REG_P2P'        => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post, Small, Pers2Pers'),
+                                        'display_title'   => t('Registered Post Letter - Person to Person'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => 'AUS_SERVICE_OPTION_PERSON_TO_PERSON',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+/* Not currently working AusPost issue
+    'L_AUS_LET_SM_REG_CONF_P2P'     => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post, Small, Conf - P2P'),
+                                        'display_title'   => t('Registered Post Letter - Person to Person - Confirmation'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => array(
+                                          '0'             => 'AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION',
+                                          '1'             => 'AUS_SERVICE_OPTION_PERSON_TO_PERSON',
+                                          ),
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+ */
+   'L_AUS_LETTER_LG_REG_POST'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post Large'),
+                                        'display_title'   => t('Registered Post Letter Large'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG_REG_POST_CONF'  => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post Large - Conf'),
+                                        'display_title'   => t('Registered Post Letter Large - Confirmation'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => 'AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG_REG_P2P'        => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post, Large, Pers2Pers'),
+                                        'display_title'   => t('Registered Post Letter - Person to Person'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => 'AUS_SERVICE_OPTION_PERSON_TO_PERSON',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+/* Not currently working AusPost issue
+    'L_AUS_LET_LG_REG_CONF_P2P'     => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Registered Post, Large, Conf - P2P'),
+                                        'display_title'   => t('Registered Post Letter - Person to Person - Confirmation'),
+                                        'description'     => t('Australia Post - 2-6 Days'),
+                                        'service_code'    => 'AUS_LETTER_REGULAR_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_REGISTERED_POST',
+                                        'sub_opt_code'    => array(
+                                          '0'             => 'AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION',
+                                          '1'             => 'AUS_SERVICE_OPTION_PERSON_TO_PERSON',
+                                          ),
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+ */
+    'L_AUS_LETTER_SM_EXP_POST'       => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Small'),
+                                        'display_title'   => t('Express Post Envelope Small'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 220,
+                                          'width'         => 110,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_SM_EXP_SIG'        => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Small - Signature'),
+                                        'display_title'   => t('Express Post Envelope Small - Signature'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_SMALL',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 220,
+                                          'width'         => 110,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_MD_EXP'   => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Med'),
+                                        'display_title'   => t('Express Post Envelope Medium'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_MEDIUM',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 229,
+                                          'width'         => 162,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_MD_EXP_SIG'   => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Med - Signature'),
+                                        'display_title'   => t('Express Post Envelope Medium - Signature'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_MEDIUM',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 229,
+                                          'width'         => 162,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG_EXPRESS_POST'   => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Large'),
+                                        'display_title'   => t('Express Post Envelope Large'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_STANDARD',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 353,
+                                          'width'         => 250,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_AUS_LETTER_LG_EXP_POST_SIG'   => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'domestic',
+                                        'title'           => t('Express Post Envelope Large - Signature'),
+                                        'display_title'   => t('Express Post Envelope Large - Signature'),
+                                        'description'     => t('Australia Post - 1-3 Days'),
+                                        'service_code'    => 'AUS_LETTER_EXPRESS_LARGE',
+                                        'option_code'     => 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 353,
+                                          'width'         => 250,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    // International Letter services.
+    'L_INTL_SERVICE_AIR_MAIL_LGT' => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Air Mail Light'),
+                                        'display_title'   => t('Air Mail Light'),
+                                        'description'     => t('Australia Post - 6+ Days'),
+                                        'service_code'    => 'INT_LETTER_AIR_OWN_PACKAGING_LIGHT',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 50,
+                                          ),
+                                        ),
+    'L_INTL_SERVICE_AIR_MAIL_MED' => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Air Mail Medium'),
+                                        'display_title'   => t('Air Mail Medium'),
+                                        'description'     => t('Australia Post - 6+ Days'),
+                                        'service_code'    => 'INT_LETTER_AIR_OWN_PACKAGING_MEDIUM',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 250,
+                                          ),
+                                        ),
+    'L_INTL_SERVICE_AIR_MAIL_HVY' => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Air Mail Heavy'),
+                                        'display_title'   => t('Air Mail Heavy'),
+                                        'description'     => t('Australia Post - 6+ Days'),
+                                        'service_code'    => 'INT_LETTER_AIR_OWN_PACKAGING_HEAVY',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LETTER_REG_SMALL' => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Registered Prepaid DL'),
+                                        'display_title'   => t('International Registered Prepaid DL Envelope'),
+                                        'description'     => t('Australia Post - 6+ Days'),
+                                        'service_code'    => 'INT_LETTER_REG_SMALL_ENVELOPE',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 240,
+                                          'width'         => 130,
+                                          'thickness'     => 5,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LETTER_REG_LARGE' => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Registered Prepaid B4'),
+                                        'display_title'   => t('International Registered Prepaid B4 Envelope'),
+                                        'description'     => t('Australia Post - 6+ Days'),
+                                        'service_code'    => 'INT_LETTER_REG_LARGE_ENVELOPE',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 265,
+                                          'width'         => 250,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LET_EXP_OWN_PKG'         => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Express Letter'),
+                                        'display_title'   => t('International Express Letter'),
+                                        'description'     => t('Australia Post - 2+ Days'),
+                                        'service_code'    => 'INT_LETTER_EXP_OWN_PACKAGING',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LET_EXP_OWN_PKG_INS'     => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Express Letter, Insured'),
+                                        'display_title'   => t('International Express Letter (Insured)'),
+                                        'description'     => t('Australia Post - 2+ Days'),
+                                        'service_code'    => 'INT_LETTER_EXP_OWN_PACKAGING',
+                                        'option_code'     => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 5000,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LET_COR_OWN_PKG'         => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Courier Letter'),
+                                        'display_title'   => t('International Courier Letter'),
+                                        'description'     => t('Australia Post - 2+ Days'),
+                                        'service_code'    => 'INT_LETTER_COR_OWN_PACKAGING',
+                                        'option_code'     => '',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 0,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
+                                        ),
+    'L_INT_LET_COR_OWN_PKG_INS'     => array(
+                                        'type'            => 'letter',
+                                        'destination'     => 'international',
+                                        'title'           => t('Int Courier Letter, Insured'),
+                                        'display_title'   => t('International Courier Letter (Insured)'),
+                                        'description'     => t('Australia Post - 2+ Days'),
+                                        'service_code'    => 'INT_LETTER_COR_OWN_PACKAGING',
+                                        'option_code'     => 'INT_EXTRA_COVER',
+                                        'sub_opt_code'    => '',
+                                        'extra_cover'     => 5000,
+                                        'max_dimensions'  => array(
+                                          'length'        => 360,
+                                          'width'         => 260,
+                                          'thickness'     => 20,
+                                          'weight'        => 500,
+                                          ),
                                         ),
   );
 

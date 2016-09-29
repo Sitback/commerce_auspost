@@ -37,6 +37,8 @@ You can apply for one free here: http://developers.auspost.com.au
   * Put in your Australia Post API key
   * Enter the ship from postcode
   * Select the shipping methods you wish to make available in your store
+  * Enter the default package size
+  * Choose an insurance percentage to use with insured services
 * Go to Store -> Products -> Product Types -> Edit your product type
   * Add physical dimensions and physical weight to your product
   * Update your available products with physical details

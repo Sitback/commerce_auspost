@@ -12,12 +12,19 @@ function commerce_australia_post_uninstall() {
   $fields = array(
     'commerce_australia_post_api_key',
     'commerce_australia_post_postal_code',
-    'commerce_australia_post_services',
+    'commerce_australia_post_dom_services',
+    'commerce_australia_post_int_services',
+    'commerce_australia_post_dom_letters',
+    'commerce_australia_post_int_letters',
     'commerce_australia_post_default_package_size_length',
     'commerce_australia_post_default_package_size_width',
     'commerce_australia_post_default_package_size_height',
     'commerce_australia_post_rates_timeout',
+    'commerce_australia_post_default_package',
     'commerce_australia_post_show_description',
+    'commerce_australia_post_insurance',
+    'commerce_australia_post_insurance_limit',
+
     'commerce_australia_post_log',
   );
 
