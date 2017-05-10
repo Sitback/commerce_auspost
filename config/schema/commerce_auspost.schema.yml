@@ -1,0 +1,63 @@
+commerce_shipping.commerce_shipping_method.plugin.auspost:
+  type: commerce_shipping_method_configuration
+  mapping:
+    api_information:
+      label: 'API information'
+      type: mapping
+      mapping:
+        api_key:
+          type: string
+          label: 'API key'
+    options:
+      type: mapping
+      label: 'Australia Post Options'
+      mapping:
+#        packaging:
+#          type: label
+#          label: 'Packaging Strategy'
+#        rate_request_type:
+#          type: label
+#          label: 'Pricing options'
+#        dropoff:
+#          type: label
+#          label: 'Default dropoff/pickup location for your Australia Post shipments'
+#        insurance:
+#          type: boolean
+#          label: 'Include Insurance'
+        log:
+          type: mapping:
+          label: 'Log the following messages for debugging'
+          mapping:
+            request:
+              type: field.value.boolean
+              mapping:
+                value:
+                  label: 'API request messages'
+            response:
+              type: field.value.boolean
+              mapping:
+                value:
+                  label: 'API response messages'
+    plugins:
+    type: sequence
+    label: 'Australia Post Service Plugins'
+    sequence:
+      type: mapping
+      label: 'Australia Post Service Plugin'
+      mapping:
+        plugin_id:
+          type: string
+          label: 'Plugin Id'
+        configuration:
+          type: commerce_auspost.auspost_plugin.plugin.[%parent.plugin_id]
+
+commerce_auspost.auspost_plugin.plugin.*:
+  type: commerce_auspost_plugin
+
+commerce_auspost_plugin:
+  type: mapping
+  label: 'Australia Post Plugin'
+  mapping:
+    id:
+      type: string
+      label: plugin_id

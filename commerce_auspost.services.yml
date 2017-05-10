@@ -1,0 +1,17 @@
+services:
+#  commerce_auspost.commerce_auspost_packer:
+#    class: Drupal\commerce_auspost\Packer\CommerceFedExPacker
+#    arguments: ['@entity_type.manager', '@event_dispatcher']
+#    tags:
+#      - { name: commerce_shipping.packer, priority: 0 }
+#
+#  commerce_auspost.fedex_request:
+#    class: Drupal\commerce_auspost\FedExRequest
+
+  logger.channel.commerce_auspost:
+    parent: logger.channel_base
+    arguments: ['commerce_auspost']
+
+#  plugin.manager.commerce_auspost_service:
+#    class: Drupal\commerce_auspost\FedExPluginManager
+#    parent: default_plugin_manager
