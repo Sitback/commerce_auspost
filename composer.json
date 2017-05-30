@@ -1,0 +1,24 @@
+{
+  "name": "drupal/commerce_auspost",
+  "description": "Integrates Australia Post postage estimation with Commerce Shipping.",
+  "type": "drupal-module",
+  "license": "GPL-2.0+",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.drupal.org/8"
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "require": {
+    "php": ">=5.6",
+    "drupal/commerce": "~2",
+    "drupal/commerce_shipping": "~2",
+    "drupal/physical": "~1",
+    "fontis/auspost-api-php": "^1.0"
+  }
+}
