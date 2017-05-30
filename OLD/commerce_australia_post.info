@@ -1,0 +1,7 @@
+name = Australia Post
+description = Integrates Australia Post postage estimation with Commerce Shipping.
+package = Commerce (shipping)
+dependencies[] = commerce
+dependencies[] = commerce_shipping (7.x-2.x)
+dependencies[] = commerce_physical
+core = 7.x
