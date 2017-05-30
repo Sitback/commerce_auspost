@@ -3,7 +3,6 @@
 namespace Drupal\commerce_auspost\PostageAssessment;
 
 use Auspost\Common\Auspost;
-use Guzzle\Http\Exception\ClientErrorResponseException;
 
 /**
  * Defines an AusPost PAC client.
