@@ -4,6 +4,12 @@ namespace Drupal\commerce_auspost\PostageServices;
 
 use Auspost\Postage\Enum\ServiceCode;
 use Auspost\Postage\Enum\ServiceOption;
+use Drupal\physical\Length;
+use Drupal\physical\LengthUnit;
+use Drupal\physical\Volume;
+use Drupal\physical\VolumeUnit;
+use Drupal\physical\Weight;
+use Drupal\physical\WeightUnit;
 
 /**
  * All supported AusPost service definitions.
@@ -25,6 +31,31 @@ final class ServiceDefinitions {
 
   // International services.
   const SERVICE_DEST_INTERNATIONAL = 'international';
+
+  /**
+   * Maximum package dimensions supported by AusPost.
+   *
+   * @see https://auspost.com.au/parcels-mail/postage-tips-guides/size-weight-guidelines
+   *
+   * @return array
+   *   A list of max package dimensions for each destination
+   *   (domestic & international). Each dimenion array will have one or more of
+   *   the following keys: length, weight, volume, girth.
+   */
+  public static function maxParcelDimensions() {
+    return [
+      static::SERVICE_DEST_DOMESTIC => [
+        'length' => new Length('105', LengthUnit::CENTIMETER),
+        'weight' => new Weight('22', WeightUnit::KILOGRAM),
+        'volume' => new Volume('0.25', VolumeUnit::CUBIC_METER),
+      ],
+      static::SERVICE_DEST_INTERNATIONAL => [
+        'length' => new Length('105', LengthUnit::CENTIMETER),
+        'weight' => new Weight('20', WeightUnit::KILOGRAM),
+        'girth' => new Length('140', LengthUnit::CENTIMETER),
+      ],
+    ];
+  }
 
   /**
    * All supported AusPost services.

@@ -2,13 +2,6 @@
 
 namespace Drupal\commerce_auspost\PostageServices;
 
-use Drupal\physical\Length;
-use Drupal\physical\LengthUnit;
-use Drupal\physical\Volume;
-use Drupal\physical\VolumeUnit;
-use Drupal\physical\Weight;
-use Drupal\physical\WeightUnit;
-
 /**
  * Defines some AusPost service support helpers.
  *
@@ -190,8 +183,6 @@ class ServiceSupport {
   /**
    * Maximum package dimensions supported by AusPost.
    *
-   * @see https://auspost.com.au/parcels-mail/postage-tips-guides/size-weight-guidelines
-   *
    * @param string $destination
    *   Package destination.
    *
@@ -203,26 +194,15 @@ class ServiceSupport {
    *   If package destination is not valid.
    */
   public function getMaxParcelDimensions($destination) {
-    switch ($destination) {
-      case ServiceDefinitions::SERVICE_DEST_DOMESTIC:
-        return [
-          'length' => new Length('105', LengthUnit::CENTIMETER),
-          'weight' => new Weight('22', WeightUnit::KILOGRAM),
-          'volume' => new Volume('0.25', VolumeUnit::CUBIC_METER),
-        ];
+    $dimensions = ServiceDefinitions::maxParcelDimensions();
 
-      case ServiceDefinitions::SERVICE_DEST_INTERNATIONAL:
-        return [
-          'length' => new Length('105', LengthUnit::CENTIMETER),
-          'weight' => new Weight('20', WeightUnit::KILOGRAM),
-          'girth' => new Length('140', LengthUnit::CENTIMETER),
-        ];
-
-      default:
-        throw new ServiceSupportException(
-          "Unknown package destination '{$destination}'."
-        );
+    if (array_key_exists($destination, $dimensions)) {
+      return $dimensions[$destination];
     }
+
+    throw new ServiceSupportException(
+      "Unknown package destination '{$destination}'."
+    );
   }
 
 }
