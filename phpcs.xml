@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<ruleset name="Sitback">
+
+  <description>Sitback's Drupal 8 coding standards.</description>
+
+  <!-- Use local Drupal coding standards. -->
+  <config name="installed_paths" value="vendor/drupal/coder/coder_sniffer" />
+
+  <!-- Code. -->
+  <file>./src</file>
+
+  <!-- Tests. -->
+  <!--<file>./tests</file>-->
+
+  <!-- Drupal's PHP & JS files -->
+  <arg name="extensions" value="php,module,inc,install,test,profile,theme,js" />
+
+  <rule ref="Drupal" >
+    <!-- Excluded since it's quite useful to put inline variable hints in PHPStorm. -->
+    <exclude name="Drupal.Commenting.InlineComment.DocBlock" />
+  </rule>
+  <rule ref="DrupalPractice" />
+
+</ruleset>

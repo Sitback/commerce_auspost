@@ -20,5 +20,8 @@
     "drupal/commerce_shipping": "~2",
     "drupal/physical": "~1",
     "fontis/auspost-api-php": "^1.0"
+  },
+  "require-dev": {
+    "drupal/coder": "^8.2"
   }
 }
