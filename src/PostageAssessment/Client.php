@@ -9,7 +9,7 @@ use Auspost\Common\Auspost;
  *
  * @package Drupal\commerce_auspost\PostageAssessment
  */
-class Client {
+class Client implements ClientInterface {
 
   /**
    * AusPost PAC API key.
@@ -28,23 +28,14 @@ class Client {
   private $client;
 
   /**
-   * Request constructor.
-   *
-   * @param NULL $apiKey
-   *   AusPost PAC API key.
+   * {@inheritdoc}
    */
   public function __construct($apiKey = NULL) {
     $this->apiKey = $apiKey;
   }
 
   /**
-   * Set API key.
-   *
-   * @param string $key
-   *   API key to set.
-   *
-   * @return $this
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
+   * {@inheritdoc}
    */
   public function setApiKey($key) {
     if (empty($key)) {
@@ -56,10 +47,7 @@ class Client {
   }
 
   /**
-   * Get the AusPost Postage client, instantiating if required.
-   *
-   * @return \Auspost\Postage\PostageClient
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
+   * {@inheritdoc}
    */
   public function getClient() {
     if ($this->apiKey === NULL) {
@@ -76,6 +64,9 @@ class Client {
     return $this->client;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function calculatePostage(Request $request) {
     $address = $request->getAddress();
     $dimensions = $request->getDimensions();

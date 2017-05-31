@@ -5,7 +5,7 @@ namespace Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod;
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\ConfigurationException;
 use Drupal\commerce_auspost\Forms\ConfigureForm;
-use Drupal\commerce_auspost\PostageAssessment\Client;
+use Drupal\commerce_auspost\PostageAssessment\ClientInterface;
 use Drupal\commerce_auspost\PostageAssessment\Request;
 use Drupal\commerce_auspost\PostageAssessment\SupportedServices;
 use Drupal\commerce_price\Price;
@@ -86,7 +86,7 @@ class AusPost extends ShippingMethodBase {
   /**
    * AusPost client.
    *
-   * @var \Drupal\commerce_auspost\PostageAssessment\Client
+   * @var \Drupal\commerce_auspost\PostageAssessment\ClientInterface
    */
   private $client;
 
@@ -109,7 +109,7 @@ class AusPost extends ShippingMethodBase {
    *   The configuration form.
    * @param \Drupal\commerce_auspost\PostageAssessment\SupportedServices $supportedServices
    *   AusPost PAC supported services.
-   * @param \Drupal\commerce_auspost\PostageAssessment\Client $client
+   * @param \Drupal\commerce_auspost\PostageAssessment\ClientInterface $client
    *   AusPost PAC client.
    */
   public function __construct(
@@ -121,7 +121,7 @@ class AusPost extends ShippingMethodBase {
     RounderInterface $rounder,
     ConfigureForm $configurationForm,
     SupportedServices $supportedServices,
-    Client $client
+    ClientInterface $client
   ) {
     parent::__construct(
       $configuration,
