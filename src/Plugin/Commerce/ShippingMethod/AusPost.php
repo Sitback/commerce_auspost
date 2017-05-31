@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides the Australia Post shipping method.
  *
- * @see \Drupal\commerce_auspost\PostageAssessment\ServiceSupport
+ * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions
  *   For further information on supported services.
  *
  * @CommerceShippingMethod(
@@ -159,7 +159,7 @@ class AusPost extends ShippingMethodBase {
       $container->get('logger.channel.commerce_auspost'),
       $container->get('commerce_price.rounder'),
       new ConfigureForm(),
-      $container->get('commerce_auspost.postage_assessment.services'),
+      $container->get('commerce_auspost.postage_services.service_support'),
       $container->get('commerce_auspost.postage_assessment.client')
     );
   }

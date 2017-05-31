@@ -19,7 +19,7 @@ class ServiceSupport {
    *   TRUE if the service exists, FALSE otherwise.
    */
   public function hasService($key) {
-    return array_key_exists($key, $this->services());
+    return array_key_exists($key, ServiceDefinitions::services());
   }
 
   /**

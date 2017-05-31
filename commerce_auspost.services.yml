@@ -5,13 +5,13 @@ services:
     tags:
       - { name: commerce_shipping.packer, priority: 0 }
 
-  commerce_auspost.postage_assessment.services:
+  commerce_auspost.postage_services.service_support:
     class: Drupal\commerce_auspost\PostageServices\ServiceSupport
     arguments: []
 
   commerce_auspost.postage_assessment.request:
       class: Drupal\commerce_auspost\PostageAssessment\Request
-      arguments: ['@commerce_auspost.postage_assessment.services']
+      arguments: ['@commerce_auspost.postage_services.service_support']
       shared: false
 
   commerce_auspost.postage_assessment.response:
