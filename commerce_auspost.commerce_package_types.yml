@@ -1,0 +1,85 @@
+#commerce_auspost_domestic_parcel:
+#  class: \Drupal\commerce_auspost\Plugin\Commerce\PackageType\DomesticParcel
+#  deriver: \Drupal\commerce_auspost\Plugin\Deriver\DomesticParcelDeriver
+
+# These are defined manually as we don't have access to the PAC API in the
+# context of a plugin deriver.
+commerce_auspost:domestic_parcel:boxed_bc:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_BC'
+  label: 'Australia Post Domestic Mailing Box - Bx1 (22.0cm x 16.0cm x 7.7cm)'
+  dimensions:
+    length: 220
+    width: 160
+    height: 77
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_bm:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_BM'
+  label: 'Australia Post Domestic Mailing Box - Bx2 (31.0cm x 22.5cm x 10.2cm)'
+  dimensions:
+    length: 310
+    width: 225
+    height: 102
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_bp:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_BP'
+  label: 'Australia Post Domestic Mailing Box - Bx3 (40.0cm x 20.0cm x 18.0cm)'
+  dimensions:
+    length: 400
+    width: 200
+    height: 180
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_bt:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_BT'
+  label: 'Australia Post Domestic Mailing Box - Bx4 (43.0cm x 30.5cm x 14.0cm)'
+  dimensions:
+    length: 430
+    width: 305
+    height: 140
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_bw:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_BW'
+  label: 'Australia Post Domestic Mailing Box - Bx5 (40.5cm x 30.0cm x 25.5cm)'
+  dimensions:
+    length: 405
+    width: 300
+    height: 255
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_vcb:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_VCB'
+  label: 'Australia Post Domestic Mailing Box - Bx6 (22.0cm x 14.5cm x 3.5cm)'
+  dimensions:
+    length: 220
+    width: 145
+    height: 35
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_cd:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_CD'
+  label: 'Australia Post Domestic Mailing Box - Bx7 (14.5cm x 12.7cm x 1.0cm)'
+  dimensions:
+    length: 145
+    width: 127
+    height: 10
+    unit: 'mm'
+
+commerce_auspost:domestic_parcel:boxed_toughpak:
+  shipping_method: 'auspost'
+  remote_id: 'AUS_PARCEL_TYPE_BOXED_TOUGHPAK'
+  label: 'Australia Post Domestic Mailing Box - Bx8 (36.3cm x 21.2cm x 6.5cm)'
+  dimensions:
+    length: 363
+    width: 212
+    height: 65
+    unit: 'mm'
