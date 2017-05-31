@@ -258,6 +258,9 @@ class AusPost extends ShippingMethodBase {
         $this->logApi('Sending AusPost PAC API request', $request);
 
         $response = $this->client->calculatePostage($request);
+
+        // Log response as well.
+        $this->logApi('Received AusPost PAC API response', $response);
       } catch (ClientErrorResponseException $e) {
         $this->logException($e, 'Error fetching rates from AusPost.');
         continue;
