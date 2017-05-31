@@ -222,7 +222,6 @@ class AusPost extends ShippingMethodBase {
    * @throws \Drupal\commerce_auspost\PostageAssessment\ServiceNotFoundException
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ResponseException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
@@ -271,13 +270,18 @@ class AusPost extends ShippingMethodBase {
         continue;
       }
 
-      $rates[] = new ShippingRate(
-        $definitionKey,
-        $this->services[$definitionKey],
+      // Apply any modifiers to the postage cost if necessary.
+      $postagePrice = $this->calculatePostageCost(
         new Price(
           $postage,
           static::AUD_CURRENCY_CODE
         )
+      );
+
+      $rates[] = new ShippingRate(
+        $definitionKey,
+        $this->services[$definitionKey],
+        $postagePrice
       );
     }
 
@@ -316,6 +320,40 @@ class AusPost extends ShippingMethodBase {
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
     $this->configurationForm->submitForm($form, $form_state);
     parent::submitConfigurationForm($form, $form_state);
+  }
+
+  /**
+   * Applies any multipliers or roundings to the raw postage cost.
+   *
+   * @param \Drupal\commerce_price\Price $postage
+   *   Raw postage cost.
+   *
+   * @see \Drupal\commerce_price\RounderInterface::round()
+   * @see \Drupal\commerce_price\Price::multiply()
+   *
+   * @return \Drupal\commerce_price\Price
+   *   Tweaked postage price.
+   *
+   * @throws \InvalidArgumentException
+   */
+  private function calculatePostageCost(Price $postage) {
+    // Get rounding and multiplier from configuration.
+    $multiplier = 1.0;
+    if (!empty($this->configuration['options']['rate_multiplier'])) {
+      $multiplier = (float) $this->configuration['options']['rate_multiplier'];
+    }
+    $rounding = PHP_ROUND_HALF_UP;
+    if (!empty($this->configuration['options']['round'])) {
+      $rounding = (int) $this->configuration['options']['round'];
+    }
+
+    if ($multiplier > 1) {
+      $postage = $postage->multiply((string) $multiplier);
+    }
+
+    $postage = $this->rounder->round($postage, $rounding);
+
+    return $postage;
   }
 
 }
