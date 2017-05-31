@@ -43,13 +43,27 @@ class Request implements RequestInterface {
   private $serviceDefinition;
 
   /**
+   * Supported services.
+   *
+   * @var \Drupal\commerce_auspost\PostageAssessment\SupportedServices
+   */
+  private $supportedServices;
+
+  /**
+   * Request constructor.
+   *
+   * @param \Drupal\commerce_auspost\PostageAssessment\SupportedServices $supportedServices
+   *   Supported services.
+   */
+  public function __construct(SupportedServices $supportedServices) {
+    $this->supportedServices = $supportedServices;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function setPackageType($packageType) {
-    $allowedTypes = [
-      SupportedServices::SERVICE_TYPE_PARCEL,
-      SupportedServices::SERVICE_TYPE_LETTER,
-    ];
+    $allowedTypes = $this->supportedServices->supportedPackageTypes();
     if (!in_array($packageType, $allowedTypes, true)) {
       throw new RequestException("Unknown package type '{$packageType}'.");
     }
@@ -139,7 +153,8 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function isParcel() {
-    return $this->packageType === SupportedServices::SERVICE_TYPE_PARCEL;
+    $supportedServices = $this->supportedServices;
+    return $this->packageType === $supportedServices::SERVICE_TYPE_PARCEL;
   }
 
   /**

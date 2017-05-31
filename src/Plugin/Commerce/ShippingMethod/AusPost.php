@@ -248,7 +248,7 @@ class AusPost extends ShippingMethodBase {
     $rates = [];
     foreach ($serviceDefinitions as $definitionKey => $definition) {
       try {
-        $request = (new Request())
+        $request = (new Request($this->supportedServices))
           ->setAddress($address)
           ->setPackageType($definition['type'])
           ->setShipment($shipment)

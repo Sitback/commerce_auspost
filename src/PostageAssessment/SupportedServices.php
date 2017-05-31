@@ -960,4 +960,30 @@ class SupportedServices {
     return $services;
   }
 
+  /**
+   * Get all supported package types.
+   *
+   * @return array
+   *   A list of all supported package types.
+   */
+  public function supportedPackageTypes() {
+    return [
+      static::SERVICE_TYPE_PARCEL,
+      static::SERVICE_TYPE_LETTER,
+    ];
+  }
+
+  /**
+   * Get all supported destinations.
+   *
+   * @return array
+   *   A list of all supported destinations.
+   */
+  public function supportedDestinations() {
+    return [
+      static::SERVICE_DEST_DOMESTIC,
+      static::SERVICE_DEST_INTERNATIONAL,
+    ];
+  }
+
 }

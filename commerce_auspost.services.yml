@@ -5,12 +5,22 @@ services:
     tags:
       - { name: commerce_shipping.packer, priority: 0 }
 
-  commerce_auspost.postage_assessment.client:
-    class: Drupal\commerce_auspost\PostageAssessment\Client
-    arguments: []
-
   commerce_auspost.postage_assessment.services:
     class: Drupal\commerce_auspost\PostageAssessment\SupportedServices
+    arguments: []
+
+  commerce_auspost.postage_assessment.request:
+      class: Drupal\commerce_auspost\PostageAssessment\Request
+      arguments: ['@commerce_auspost.postage_assessment.services']
+      shared: false
+
+  commerce_auspost.postage_assessment.response:
+      class: Drupal\commerce_auspost\PostageAssessment\Response
+      arguments: []
+      shared: false
+
+  commerce_auspost.postage_assessment.client:
+    class: Drupal\commerce_auspost\PostageAssessment\Client
     arguments: []
 
   logger.channel.commerce_auspost:
