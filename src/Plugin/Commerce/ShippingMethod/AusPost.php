@@ -162,16 +162,6 @@ class AusPost extends ShippingMethodBase {
   }
 
   /**
-   * Determine if we have the minimum information to connect to AusPost.
-   *
-   * @return bool
-   *   TRUE if there is enough information to connect, FALSE otherwise.
-   */
-  private function isConfigured() {
-    return !empty($this->configuration['api_information']['api_key']);
-  }
-
-  /**
    * Logs requests and responses from AusPost.
    *
    * @param string $message
@@ -223,7 +213,7 @@ class AusPost extends ShippingMethodBase {
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
   public function calculateRates(ShipmentInterface $shipment) {
-    if (!$this->isConfigured()) {
+    if (!$this->configurationForm->isConfigured()) {
       throw new ConfigurationException(
         'The commerce_auspost shipping method is not configured.'
       );
