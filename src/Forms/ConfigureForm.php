@@ -3,9 +3,10 @@
 namespace Drupal\commerce_auspost\Forms;
 
 use Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost;
-use Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase;
+use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 
 /**
  * Defines the form used to configure the AusPost shipping method.
@@ -22,9 +23,16 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
   private $shippingMethod;
 
   /**
+   * Service support helpers.
+   *
+   * @var \Drupal\commerce_auspost\PostageServices\ServiceSupport
+   */
+  private $serviceSupport;
+
+  /**
    * {@inheritdoc}
    */
-  public function setShippingInstance(ShippingMethodBase $instance) {
+  public function setShippingInstance(AusPost $instance) {
     $this->shippingMethod = $instance;
     return $this;
   }
@@ -34,6 +42,14 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
    */
   public function getShippingInstance() {
     return $this->shippingMethod;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setServiceSupport(ServiceSupport $serviceSupport) {
+    $this->serviceSupport = $serviceSupport;
+    return $this;
   }
 
   /**
@@ -53,6 +69,8 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Drupal\commerce_auspost\ConfigurationException
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $configuration = $this->getShippingInstance()->getConfiguration();
@@ -61,6 +79,51 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
     if (empty($configuration['services'])) {
       $serviceIds = array_keys($this->getShippingInstance()->getServices());
       $configuration['services'] = array_combine($serviceIds, $serviceIds);
+    }
+
+    $selectPackageTypesIfDefault = function(array $types, &$config) {
+      if (empty($config)) {
+        $packageTypeIds = array_keys($types);
+        $config = array_combine(
+          $packageTypeIds,
+          $packageTypeIds
+        );
+      }
+    };
+
+    $allPackageTypes = $this->getPackageTypes();
+    $form['enabled_package_types'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Enabled package types'),
+      '#description' => $this->t(
+        'Select the package types that shipments will be packed into. You can add custom package types on <a href=":url">the package types page</a>.',
+        [
+          ':url' => Url::fromRoute(
+            'entity.commerce_package_type.collection'
+          )->toString(),
+        ]
+      ),
+      '#access' => count($allPackageTypes) > 1,
+    ];
+    foreach ($this->serviceSupport->supportedDestinations() as $dest) {
+      $packageTypes = $this->getPackageTypes($dest);
+
+      // Select all package types by default.
+      $selectPackageTypesIfDefault(
+        $packageTypes,
+        $configuration['enabled_package_types'][$dest]
+      );
+
+      $form['enabled_package_types'][$dest] = [
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Enabled package types for %dest', [
+          '%dest' => ucfirst($dest),
+        ]),
+        '#options' => $packageTypes,
+        '#default_value' => $configuration['enabled_package_types'][$dest],
+        '#required' => TRUE,
+        '#access' => count($packageTypes) > 1,
+      ];
     }
 
     $form['api_information'] = [
@@ -82,17 +145,18 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       '#title' => $this->t('AusPost Options'),
       '#description' => $this->t('Additional options for AusPost'),
     ];
-    $form['options']['packaging'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Packaging strategy'),
-      '#description' => $this->t('Select your packaging strategy. "All items in one box" will ignore package type and product dimensions, and assume all items go in one box. "Each item in its own box" will create a box for each line item in the order, "Calculate" will attempt to figure out how many boxes are needed based on package type volumes and product volumes, similar to commerce_auspost 7.x.'),
-      '#options' => [
-        AusPost::PACKAGE_ALL_IN_ONE => $this->t('All items in one box'),
-        AusPost::PACKAGE_INDIVIDUAL => $this->t('Each item in its own box'),
-        AusPost::PACKAGE_CALCULATE => $this->t('Calculate'),
-      ],
-      '#default_value' => $configuration['options']['packaging'],
-    ];
+    // @TODO: Implement packing logic variants.
+    // $form['options']['packaging'] = [
+    //   '#type' => 'select',
+    //   '#title' => $this->t('Packaging strategy'),
+    //   '#description' => $this->t('Select your packaging strategy. "All items in one box" will ignore package type and product dimensions, and assume all items go in one box. "Each item in its own box" will create a box for each line item in the order, "Calculate" will attempt to figure out how many boxes are needed based on package type volumes and product volumes, similar to commerce_auspost 7.x.'),
+    //   '#options' => [
+    //     AusPost::PACKAGE_ALL_IN_ONE => $this->t('All items in one box'),
+    //     AusPost::PACKAGE_INDIVIDUAL => $this->t('Each item in its own box'),
+    //     AusPost::PACKAGE_CALCULATE => $this->t('Calculate'),
+    //   ],
+    //   '#default_value' => $configuration['options']['packaging'],
+    // ];
     $form['options']['insurance'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Include insurance'),
@@ -141,8 +205,10 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       $configuration = $this->getShippingInstance()->getConfiguration();
       $values = $this->value($form_state->getValue($form['#parents']));
 
+      $configuration['enabled_package_types'] = $values['enabled_package_types'];
       $configuration['api_information']['api_key'] = $values['api_information']['api_key'];
-      $configuration['options']['packaging'] = $values['options']['packaging'];
+      // @TODO add packaging variant support.
+      // $configuration['options']['packaging'] = $values['options']['packaging'];
       $configuration['options']['insurance'] = $values['options']['insurance'];
       $configuration['options']['rate_multiplier'] = $values['options']['rate_multiplier'];
       $configuration['options']['round'] = $values['options']['round'];
@@ -150,6 +216,26 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
 
       $this->getShippingInstance()->setConfiguration($configuration);
     }
+  }
+
+  /**
+   * Get all package types for use in a select element.
+   *
+   * @param string $dest
+   *   An (optional) package destination (one of 'domestic' or 'international)
+   *   to filter by. If not specified, all package types are returned.
+   *
+   * @return array
+   *   A list of package types, formatted for use in a select form element.
+   *
+   * @throws \Drupal\commerce_auspost\ConfigurationException
+   */
+  private function getPackageTypes($dest = NULL) {
+    $packageTypes = $this->getShippingInstance()
+      ->getPossiblePackageTypes($dest);
+    return array_map(function ($package_type) {
+      return $package_type['label'];
+    }, $packageTypes);
   }
 
   /**

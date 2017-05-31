@@ -59,6 +59,13 @@ class AusPost extends ShippingMethodBase {
   const AUD_CURRENCY_CODE = 'AUD';
 
   /**
+   * Service container.
+   *
+   * @var \Symfony\Component\DependencyInjection\ContainerInterface
+   */
+  private $container;
+
+  /**
    * Watchdog logger.
    *
    * @var \Psr\Log\LoggerInterface
@@ -102,6 +109,8 @@ class AusPost extends ShippingMethodBase {
    *   The plugin_id for the plugin instance.
    * @param mixed $pluginDefinition
    *   The plugin implementation definition.
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The service container.
    * @param \Drupal\commerce_shipping\PackageTypeManagerInterface $packageTypeManager
    *   The package type manager.
    * @param \Psr\Log\LoggerInterface $watchdog
@@ -119,6 +128,7 @@ class AusPost extends ShippingMethodBase {
     array $configuration,
     $pluginId,
     $pluginDefinition,
+    ContainerInterface $container,
     PackageTypeManagerInterface $packageTypeManager,
     LoggerInterface $watchdog,
     RounderInterface $rounder,
@@ -126,19 +136,22 @@ class AusPost extends ShippingMethodBase {
     ServiceSupport $serviceSupport,
     ClientInterface $client
   ) {
+    $this->container = $container;
+    $this->watchdog = $watchdog;
+    $this->rounder = $rounder;
+    $this->serviceSupport = $serviceSupport;
+    $this->client = $client;
+
+    $configurationForm->setShippingInstance($this)
+      ->setServiceSupport($serviceSupport);
+    $this->configurationForm = $configurationForm;
+
     parent::__construct(
       $configuration,
       $pluginId,
       $pluginDefinition,
       $packageTypeManager
     );
-    $this->watchdog = $watchdog;
-    $this->rounder = $rounder;
-    $this->serviceSupport = $serviceSupport;
-    $this->client = $client;
-
-    $configurationForm->setShippingInstance($this);
-    $this->configurationForm = $configurationForm;
   }
 
   /**
@@ -295,7 +308,8 @@ class AusPost extends ShippingMethodBase {
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
-    return [
+    $defaults = [
+      'enabled_package_types' => [],
       'api_information' => [
         'api_key' => '',
       ],
@@ -306,11 +320,19 @@ class AusPost extends ShippingMethodBase {
         'round' => PHP_ROUND_HALF_UP,
         'log' => [],
       ],
-    ] + parent::defaultConfiguration();
+    ];
+
+    foreach ($this->serviceSupport->supportedDestinations() as $dest) {
+      $defaults['enabled_package_types'][$dest] = [];
+    }
+
+    return $defaults + parent::defaultConfiguration();
   }
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Drupal\commerce_auspost\ConfigurationException
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
@@ -323,6 +345,75 @@ class AusPost extends ShippingMethodBase {
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
     $this->configurationForm->submitForm($form, $form_state);
     parent::submitConfigurationForm($form, $form_state);
+  }
+
+  /**
+   * Get all possible package types for this shipping method.
+   *
+   * This includes disabled package types.
+   *
+   * @param string $dest
+   *   An (optional) package destination (one of 'domestic' or 'international)
+   *   to filter by. If not specified, all package types are returned.
+   *
+   * @return array
+   *   A list of package type definitions.
+   *
+   * @throws \Drupal\commerce_auspost\ConfigurationException
+   */
+  public function getPossiblePackageTypes($dest = NULL) {
+    $types = $this->packageTypeManager->getDefinitionsByShippingMethod(
+      $this->getPluginId()
+    );
+    if ($dest === NULL) {
+      return $types;
+    }
+
+    if (!in_array($dest, $this->serviceSupport->supportedDestinations(), true)) {
+      throw new ConfigurationException("Unknown package destination '{$dest}'.");
+    }
+
+    // Filter out any destination-specific packages.
+    return array_filter($types, function($typeKey) use ($dest) {
+      // Ignore any custom types.
+      if (strpos($typeKey, 'commerce_auspost') !== 0) {
+        return TRUE;
+      }
+
+      // Strip out the prefix then check if the destination is valid for this
+      // package type.
+      // @see commerce_auspost.commerce_package_types.yml for all our package
+      // types.
+      $prefix = 'commerce_auspost:';
+      $typeKey = substr($typeKey, strlen($prefix));
+      return strpos($typeKey, $dest) === 0;
+    }, ARRAY_FILTER_USE_KEY);
+  }
+
+  /**
+   * Get all enabled package types for this shipping method.
+   *
+   * @param string $dest
+   *   An (optional) package destination (one of 'domestic' or 'international)
+   *   to filter by. If not specified, all enabled package types are returned.
+   *
+   * @return array
+   *   A list of enabled package type definitions.
+   *
+   * @throws \Drupal\commerce_auspost\ConfigurationException
+   */
+  public function getEnabledPackageTypes($dest = NULL) {
+    // Assume all types are fair game unless told otherwise.
+    $types = $this->getPossiblePackageTypes($dest);
+
+    if ($dest !== NULL && !empty($this->configuration['enabled_package_types'][$dest])) {
+      $types = array_intersect_key(
+        $types,
+        array_filter($this->configuration['enabled_package_types'][$dest])
+      );
+    }
+
+    return $types;
   }
 
   /**

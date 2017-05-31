@@ -2,7 +2,8 @@
 
 namespace Drupal\commerce_auspost\Forms;
 
-use Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase;
+use Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost;
+use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 
 /**
  * Provides an interface use to define configuration forms for shipping methods.
@@ -14,21 +15,32 @@ interface ConfigureFormInterface {
   /**
    * Sets the shipping method instance for this configuration form.
    *
-   * @param \Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase $instance
+   * @param \Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost $instance
    *   The shipping method instance.
    *
    * @return $this
    *   Current form instance.
    */
-  public function setShippingInstance(ShippingMethodBase $instance);
+  public function setShippingInstance(AusPost $instance);
 
   /**
    * Get the shipping method instance for this configuration form.
    *
-   * @return \Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase
+   * @return \Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost
    *   Shipping method instance.
    */
   public function getShippingInstance();
+
+  /**
+   * Sets the service helpers class this configuration form.
+   *
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceSupport $serviceSupport
+   *   The service support helpers instance.
+   *
+   * @return $this
+   *   Current form instance.
+   */
+  public function setServiceSupport(ServiceSupport $serviceSupport);
 
   /**
    * Determine if we have the minimum information to use the shipping method.
