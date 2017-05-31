@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\WeightUnit;
@@ -154,8 +155,7 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function isParcel() {
-    $serviceSupport = $this->serviceSupport;
-    return $this->packageType === $serviceSupport::SERVICE_TYPE_PARCEL;
+    return $this->packageType === ServiceDefinitions::SERVICE_TYPE_PARCEL;
   }
 
   /**
