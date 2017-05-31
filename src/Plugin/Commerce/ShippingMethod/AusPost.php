@@ -5,7 +5,6 @@ namespace Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod;
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\ConfigurationException;
 use Drupal\commerce_auspost\PostageAssessment\Client;
-use Drupal\commerce_auspost\PostageAssessment\ClientResponseException;
 use Drupal\commerce_auspost\PostageAssessment\Request;
 use Drupal\commerce_auspost\PostageAssessment\SupportedServices;
 use Drupal\commerce_price\Price;
