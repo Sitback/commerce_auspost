@@ -225,7 +225,7 @@ class Request implements RequestInterface {
   /**
    * Get total package weight including weight of all items.
    *
-   * @return \Drupal\physical\Weight
+   * @return float
    *   Total calculated package weight.
    *
    * @throws \InvalidArgumentException
@@ -256,7 +256,7 @@ class Request implements RequestInterface {
       }
     }
 
-    return $weight;
+    return (float) $weight->getNumber();
   }
 
 }
