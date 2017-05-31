@@ -117,6 +117,8 @@ interface RequestInterface {
    * @return array
    *   An array with keys for 'length', 'width', 'height' and 'weight'.
    *
+   * @throws \InvalidArgumentException
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
   public function getDimensions();

@@ -180,9 +180,7 @@ class Request implements RequestInterface {
       ->convert(LengthUnit::CENTIMETER)
       ->getNumber()
     );
-    $weight = (float) $package->getWeight()
-      ->convert(WeightUnit::KILOGRAM)
-      ->getNumber();
+    $weight = $this->getTotalPackageWeight();
 
     $dimensions = [
       'length' => $length,
@@ -222,6 +220,43 @@ class Request implements RequestInterface {
     }
 
     return $extraOpts;
+  }
+
+  /**
+   * Get total package weight including weight of all items.
+   *
+   * @return \Drupal\physical\Weight
+   *   Total calculated package weight.
+   *
+   * @throws \InvalidArgumentException
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   */
+  private function getTotalPackageWeight() {
+    $package = $this->getShipment()->getPackageType();
+
+    // First get package weight (in case the packing box itself has a weight).
+    $weight = $package->getWeight()
+      ->convert(WeightUnit::KILOGRAM);
+
+    $orderItems = $this->getShipment()->getOrder()->getItems();
+    foreach ($orderItems as $orderItem) {
+      $purchasedEntity = $orderItem->getPurchasedEntity();
+      $orderItemWeights = $purchasedEntity->get('weight');
+
+      if (!$orderItemWeights->isEmpty()) {
+        /** @var \Drupal\physical\Plugin\Field\FieldType\MeasurementItem $orderItemWeight */
+        $orderItemWeight = $orderItemWeights->first();
+
+        $totalItemWeight = $orderItemWeight->toMeasurement()
+          ->convert(WeightUnit::KILOGRAM)
+          ->multiply($orderItem->getQuantity());
+
+        $weight = $weight->add($totalItemWeight);
+      }
+    }
+
+    return $weight;
   }
 
 }
