@@ -5,6 +5,12 @@ namespace Drupal\commerce_auspost\PostageAssessment;
 use Auspost\Postage\Enum\ServiceCode;
 use Auspost\Postage\Enum\ServiceOption;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\physical\Length;
+use Drupal\physical\LengthUnit;
+use Drupal\physical\Volume;
+use Drupal\physical\VolumeUnit;
+use Drupal\physical\Weight;
+use Drupal\physical\WeightUnit;
 
 /**
  * Defines all AusPost supported postage services.
@@ -984,6 +990,44 @@ class SupportedServices {
       static::SERVICE_DEST_DOMESTIC,
       static::SERVICE_DEST_INTERNATIONAL,
     ];
+  }
+
+  /**
+   * Maximum package dimensions supported by AusPost.
+   *
+   * @see https://auspost.com.au/parcels-mail/postage-tips-guides/size-weight-guidelines
+   *
+   * @param string $destination
+   *   Package destination.
+   *
+   * @return array
+   *   An array with one or more of the following keys: length, weight, volume,
+   *   girth.
+   *
+   * @throws \Drupal\commerce_auspost\PostageAssessment\SupportedServicesException
+   *   If package destination is not valid.
+   */
+  public function getMaxParcelDimensions($destination) {
+    switch ($destination) {
+      case static::SERVICE_DEST_DOMESTIC:
+        return [
+          'length' => new Length('105', LengthUnit::CENTIMETER),
+          'weight' => new Weight('22', WeightUnit::KILOGRAM),
+          'volume' => new Volume('0.25', VolumeUnit::CUBIC_METER),
+        ];
+
+      case static::SERVICE_DEST_INTERNATIONAL:
+        return [
+          'length' => new Length('105', LengthUnit::CENTIMETER),
+          'weight' => new Weight('20', WeightUnit::KILOGRAM),
+          'girth' => new Length('140', LengthUnit::CENTIMETER),
+        ];
+
+      default:
+        throw new SupportedServicesException(
+          "Unknown package destination '{$destination}'."
+        );
+    }
   }
 
 }
