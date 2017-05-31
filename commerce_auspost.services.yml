@@ -6,7 +6,7 @@ services:
       - { name: commerce_shipping.packer, priority: 0 }
 
   commerce_auspost.postage_assessment.services:
-    class: Drupal\commerce_auspost\PostageAssessment\SupportedServices
+    class: Drupal\commerce_auspost\PostageServices\ServiceSupport
     arguments: []
 
   commerce_auspost.postage_assessment.request:
