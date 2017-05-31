@@ -10,7 +10,7 @@ use Drupal\physical\WeightUnit;
  *
  * @package Drupal\commerce_auspost\PostageAssessment
  */
-class Request {
+class Request implements RequestInterface {
 
   /**
    * Package type, one of 'parcel' or 'letter'.
@@ -43,14 +43,7 @@ class Request {
   private $serviceDefinition;
 
   /**
-   * Set package type.
-   *
-   * @param string $packageType
-   *   Package type, one of 'parcel' or 'letter'.
-   *
-   * @return $this
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function setPackageType($packageType) {
     $allowedTypes = [
@@ -66,12 +59,7 @@ class Request {
   }
 
   /**
-   * Get package type.
-   *
-   * @return string
-   *   Package type, one of 'parcel' or 'letter'.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getPackageType() {
     if ($this->packageType === NULL) {
@@ -81,12 +69,7 @@ class Request {
   }
 
   /**
-   * Set the order address.
-   *
-   * @param \Drupal\commerce_auspost\Address $address
-   *   Order address.
-   *
-   * @return $this
+   * {@inheritdoc}
    */
   public function setAddress($address) {
     $this->address = $address;
@@ -94,12 +77,7 @@ class Request {
   }
 
   /**
-   * Get order address.
-   *
-   * @return \Drupal\commerce_auspost\Address
-   *   Order address.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getAddress() {
     if ($this->address === NULL) {
@@ -109,12 +87,7 @@ class Request {
   }
 
   /**
-   * Set the order shipment.
-   *
-   * @param \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment
-   *   Order shipment.
-   *
-   * @return $this
+   * {@inheritdoc}
    */
   public function setShipment($shipment) {
     $this->shipment = $shipment;
@@ -122,12 +95,7 @@ class Request {
   }
 
   /**
-   * Get order shipment.
-   *
-   * @return \Drupal\commerce_shipping\Entity\ShipmentInterface Order shipment.
-   *   Order shipment.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getShipment() {
     if ($this->shipment === NULL) {
@@ -137,12 +105,7 @@ class Request {
   }
 
   /**
-   * Set service definition.
-   *
-   * @param array $serviceDefinition
-   *   Service definition.
-   *
-   * @return $this
+   * {@inheritdoc}
    */
   public function setServiceDefinition(array $serviceDefinition) {
     $this->serviceDefinition = $serviceDefinition;
@@ -150,12 +113,7 @@ class Request {
   }
 
   /**
-   * Get service definition.
-   *
-   * @return array
-   *   Service definition.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getServiceDefinition() {
     if ($this->serviceDefinition === NULL) {
@@ -165,14 +123,7 @@ class Request {
   }
 
   /**
-   * Checks if this request is a domestic PAC request.
-   *
-   * @return bool
-   *   TRUE if domestic, FALSE otherwise.
-   *
-   * @throws \InvalidArgumentException
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function isDomestic() {
     $isDomestic = $this->address->isDomestic();
@@ -185,22 +136,14 @@ class Request {
   }
 
   /**
-   * Check if the request is for a parcel or a letter.
-   *
-   * @return bool
-   *   TRUE if it is a parcel, FALSE if it is a letter.
+   * {@inheritdoc}
    */
   public function isParcel() {
     return $this->packageType === SupportedServices::SERVICE_TYPE_PARCEL;
   }
 
   /**
-   * Get order shipment dimensions.
-   *
-   * @return array
-   *   An array with keys for 'length', 'width', 'height' and 'weight'.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getDimensions() {
     $package = $this->getShipment()->getPackageType();
@@ -236,24 +179,14 @@ class Request {
   }
 
   /**
-   * Get the AusPost service code.
-   *
-   * @return string
-   *   Service code.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getServiceCode() {
     return $this->getServiceDefinition()['service_code'];
   }
 
   /**
-   * Any further service options that are sent in the API call.
-   *
-   * @return array
-   *   An array of extra service options.
-   *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * {@inheritdoc}
    */
   public function getExtraServiceOptions() {
     $extraOpts = [];

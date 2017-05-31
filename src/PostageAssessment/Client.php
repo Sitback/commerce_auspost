@@ -67,7 +67,7 @@ class Client implements ClientInterface {
   /**
    * {@inheritdoc}
    */
-  public function calculatePostage(Request $request) {
+  public function calculatePostage(RequestInterface $request) {
     $address = $request->getAddress();
     $dimensions = $request->getDimensions();
     $opts = [

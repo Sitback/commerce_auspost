@@ -43,7 +43,7 @@ interface ClientInterface {
   /**
    * Get postage cost from AusPost.
    *
-   * @param \Drupal\commerce_auspost\PostageAssessment\Request $request
+   * @param \Drupal\commerce_auspost\PostageAssessment\RequestInterface $request
    *   The request to send to AusPost.
    *
    * @return string
@@ -54,6 +54,6 @@ interface ClientInterface {
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
-  public function calculatePostage(Request $request);
+  public function calculatePostage(RequestInterface $request);
 
 }
