@@ -10,7 +10,7 @@ use Drupal\commerce_auspost\PostageAssessment\Request;
 use Drupal\commerce_auspost\PostageAssessment\RequestInterface;
 use Drupal\commerce_auspost\PostageAssessment\ResponseException;
 use Drupal\commerce_auspost\PostageAssessment\ResponseInterface;
-use Drupal\commerce_auspost\PostageAssessment\SupportedServices;
+use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\RounderInterface;
 use Drupal\commerce_shipping\Entity\ShipmentInterface;
@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides the Australia Post shipping method.
  *
- * @see \Drupal\commerce_auspost\PostageAssessment\SupportedServices
+ * @see \Drupal\commerce_auspost\PostageAssessment\ServiceSupport
  *   For further information on supported services.
  *
  * @CommerceShippingMethod(
@@ -80,11 +80,11 @@ class AusPost extends ShippingMethodBase {
   private $configurationForm;
 
   /**
-   * All supported services.
+   * Service support helpers
    *
-   * @var \Drupal\commerce_auspost\PostageAssessment\SupportedServices
+   * @var \Drupal\commerce_auspost\PostageServices\ServiceSupport
    */
-  private $supportedServices;
+  private $serviceSupport;
 
   /**
    * AusPost client.
@@ -110,7 +110,7 @@ class AusPost extends ShippingMethodBase {
    *   The price rounder.
    * @param \Drupal\commerce_auspost\Forms\ConfigureForm $configurationForm
    *   The configuration form.
-   * @param \Drupal\commerce_auspost\PostageAssessment\SupportedServices $supportedServices
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceSupport $serviceSupport
    *   AusPost PAC supported services.
    * @param \Drupal\commerce_auspost\PostageAssessment\ClientInterface $client
    *   AusPost PAC client.
@@ -123,7 +123,7 @@ class AusPost extends ShippingMethodBase {
     LoggerInterface $watchdog,
     RounderInterface $rounder,
     ConfigureForm $configurationForm,
-    SupportedServices $supportedServices,
+    ServiceSupport $serviceSupport,
     ClientInterface $client
   ) {
     parent::__construct(
@@ -134,7 +134,7 @@ class AusPost extends ShippingMethodBase {
     );
     $this->watchdog = $watchdog;
     $this->rounder = $rounder;
-    $this->supportedServices = $supportedServices;
+    $this->serviceSupport = $serviceSupport;
     $this->client = $client;
 
     $configurationForm->setShippingInstance($this);
@@ -219,9 +219,9 @@ class AusPost extends ShippingMethodBase {
    * @throws \InvalidArgumentException
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    * @throws \Drupal\commerce_auspost\ConfigurationException
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ServiceNotFoundException
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
@@ -240,7 +240,7 @@ class AusPost extends ShippingMethodBase {
     );
 
     // @TODO: Allow altering of rate labels.
-    $serviceDefinitions = $this->supportedServices->getServicesByKeys(
+    $serviceDefinitions = $this->serviceSupport->getServicesByKeys(
       array_keys($this->services)
     );
 
@@ -248,7 +248,7 @@ class AusPost extends ShippingMethodBase {
     $rates = [];
     foreach ($serviceDefinitions as $definitionKey => $definition) {
       try {
-        $request = (new Request($this->supportedServices))
+        $request = (new Request($this->serviceSupport))
           ->setAddress($address)
           ->setPackageType($definition['type'])
           ->setShipment($shipment)

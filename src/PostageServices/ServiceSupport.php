@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_auspost\PostageAssessment;
+namespace Drupal\commerce_auspost\PostageServices;
 
 use Auspost\Postage\Enum\ServiceCode;
 use Auspost\Postage\Enum\ServiceOption;
@@ -13,11 +13,11 @@ use Drupal\physical\Weight;
 use Drupal\physical\WeightUnit;
 
 /**
- * Defines all AusPost supported postage services.
+ * Defines some AusPost service support helpers.
  *
  * @package Drupal\commerce_auspost\PostageAssessment
  */
-class SupportedServices {
+class ServiceSupport {
 
   use StringTranslationTrait;
 
@@ -843,7 +843,7 @@ class SupportedServices {
    * @return array
    *   Service definition.
    *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ServiceNotFoundException
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
    *   If requested service doesn't exist.
    */
   public function getService($key) {
@@ -947,7 +947,7 @@ class SupportedServices {
    * @return array
    *   Service definitions keyed by service key.
    *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\ServiceNotFoundException
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
    */
   public function getServicesByKeys(array $keys, $ignoreNonExisting = FALSE) {
     $services = [];
@@ -1004,7 +1004,7 @@ class SupportedServices {
    *   An array with one or more of the following keys: length, weight, volume,
    *   girth.
    *
-   * @throws \Drupal\commerce_auspost\PostageAssessment\SupportedServicesException
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
    *   If package destination is not valid.
    */
   public function getMaxParcelDimensions($destination) {
@@ -1024,7 +1024,7 @@ class SupportedServices {
         ];
 
       default:
-        throw new SupportedServicesException(
+        throw new ServiceSupportException(
           "Unknown package destination '{$destination}'."
         );
     }

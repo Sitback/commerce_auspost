@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\WeightUnit;
 
@@ -43,27 +44,27 @@ class Request implements RequestInterface {
   private $serviceDefinition;
 
   /**
-   * Supported services.
+   * Service support helpers.
    *
-   * @var \Drupal\commerce_auspost\PostageAssessment\SupportedServices
+   * @var \Drupal\commerce_auspost\PostageServices\ServiceSupport
    */
-  private $supportedServices;
+  private $serviceSupport;
 
   /**
    * Request constructor.
    *
-   * @param \Drupal\commerce_auspost\PostageAssessment\SupportedServices $supportedServices
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceSupport $serviceSupport
    *   Supported services.
    */
-  public function __construct(SupportedServices $supportedServices) {
-    $this->supportedServices = $supportedServices;
+  public function __construct(ServiceSupport $serviceSupport) {
+    $this->serviceSupport = $serviceSupport;
   }
 
   /**
    * {@inheritdoc}
    */
   public function setPackageType($packageType) {
-    $allowedTypes = $this->supportedServices->supportedPackageTypes();
+    $allowedTypes = $this->serviceSupport->supportedPackageTypes();
     if (!in_array($packageType, $allowedTypes, true)) {
       throw new RequestException("Unknown package type '{$packageType}'.");
     }
@@ -153,8 +154,8 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function isParcel() {
-    $supportedServices = $this->supportedServices;
-    return $this->packageType === $supportedServices::SERVICE_TYPE_PARCEL;
+    $serviceSupport = $this->serviceSupport;
+    return $this->packageType === $serviceSupport::SERVICE_TYPE_PARCEL;
   }
 
   /**

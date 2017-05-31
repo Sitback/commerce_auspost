@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_auspost\PostageAssessment;
+namespace Drupal\commerce_auspost\PostageServices;
 
 use Exception;
 
