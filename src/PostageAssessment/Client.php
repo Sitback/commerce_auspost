@@ -113,8 +113,11 @@ class Client implements ClientInterface {
     $method .= 'Postage';
 
     // Errors are thrown but caught by the caller.
-    $response = $this->getClient()->{$method}($opts);
-    return $response['postage_result']['total_cost'];
+    $apiResponse = $this->getClient()->{$method}($opts);
+
+    return (new Response())
+      ->setRequest($request)
+      ->setResponse($apiResponse);
   }
 
 }

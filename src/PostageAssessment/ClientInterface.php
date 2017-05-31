@@ -46,8 +46,8 @@ interface ClientInterface {
    * @param \Drupal\commerce_auspost\PostageAssessment\RequestInterface $request
    *   The request to send to AusPost.
    *
-   * @return string
-   *   Postage cost from AusPost
+   * @return \Drupal\commerce_auspost\PostageAssessment\ResponseInterface
+   *   API response from AusPost.
    *
    * @throws \InvalidArgumentException
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException

@@ -7,6 +7,9 @@ use Drupal\commerce_auspost\ConfigurationException;
 use Drupal\commerce_auspost\Forms\ConfigureForm;
 use Drupal\commerce_auspost\PostageAssessment\ClientInterface;
 use Drupal\commerce_auspost\PostageAssessment\Request;
+use Drupal\commerce_auspost\PostageAssessment\RequestInterface;
+use Drupal\commerce_auspost\PostageAssessment\ResponseException;
+use Drupal\commerce_auspost\PostageAssessment\ResponseInterface;
 use Drupal\commerce_auspost\PostageAssessment\SupportedServices;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\RounderInterface;
@@ -170,13 +173,21 @@ class AusPost extends ShippingMethodBase {
    *   The AusPost request or response object.
    * @param string $level
    *   The log level.
-   * @param bool $skipCheck
-   *   Whether to skip the check to log or not.
    */
-  private function logRequest($message, $data, $level = LogLevel::INFO, $skipCheck = FALSE) {
-    if ($skipCheck || $this->configuration['options']['log']['request']) {
-      $this->watchdog->log($level, "$message <br>@rate_request", [
-        '@rate_request' => var_export($data, TRUE),
+  private function logApi($message, $data, $level = LogLevel::INFO) {
+    $doLog = FALSE;
+    $config = $this->configuration;
+    if ($data instanceof RequestInterface &&
+        array_key_exists('request', $config['options']['log'])) {
+      $doLog = TRUE;
+    } elseif ($data instanceof ResponseInterface &&
+              array_key_exists('response', $config['options']['log'])) {
+      $doLog = TRUE;
+    }
+
+    if ($doLog) {
+      $this->watchdog->log($level, "$message <br>@details", [
+        '@details' => json_encode($data),
       ]);
     }
   }
@@ -211,6 +222,7 @@ class AusPost extends ShippingMethodBase {
    * @throws \Drupal\commerce_auspost\PostageAssessment\ServiceNotFoundException
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * @throws \Drupal\commerce_auspost\PostageAssessment\ResponseException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
@@ -242,8 +254,19 @@ class AusPost extends ShippingMethodBase {
           ->setPackageType($definition['type'])
           ->setShipment($shipment)
           ->setServiceDefinition($definition);
-        $postage = $this->client->calculatePostage($request);
+
+        // Log request if enabled.
+        $this->logApi('Sending AusPost PAC API request', $request);
+
+        $response = $this->client->calculatePostage($request);
       } catch (ClientErrorResponseException $e) {
+        $this->logException($e, 'Error fetching rates from AusPost.');
+        continue;
+      }
+
+      try {
+        $postage = (string) $response->getPostage();
+      } catch (ResponseException $e) {
         $this->logException($e, 'Error fetching rates from AusPost.');
         continue;
       }
@@ -251,7 +274,10 @@ class AusPost extends ShippingMethodBase {
       $rates[] = new ShippingRate(
         $definitionKey,
         $this->services[$definitionKey],
-        new Price($postage, static::AUD_CURRENCY_CODE)
+        new Price(
+          $postage,
+          static::AUD_CURRENCY_CODE
+        )
       );
     }
 
