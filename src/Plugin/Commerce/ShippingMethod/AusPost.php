@@ -4,6 +4,7 @@ namespace Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod;
 
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\ConfigurationException;
+use Drupal\commerce_auspost\Forms\ConfigureForm;
 use Drupal\commerce_auspost\PostageAssessment\Client;
 use Drupal\commerce_auspost\PostageAssessment\Request;
 use Drupal\commerce_auspost\PostageAssessment\SupportedServices;
@@ -69,6 +70,13 @@ class AusPost extends ShippingMethodBase {
   private $rounder;
 
   /**
+   * The configuration form.
+   *
+   * @var \Drupal\commerce_auspost\Forms\ConfigureForm
+   */
+  private $configurationForm;
+
+  /**
    * All supported services.
    *
    * @var \Drupal\commerce_auspost\PostageAssessment\SupportedServices
@@ -97,6 +105,8 @@ class AusPost extends ShippingMethodBase {
    *   Watchdog logger.
    * @param \Drupal\commerce_price\RounderInterface $rounder
    *   The price rounder.
+   * @param \Drupal\commerce_auspost\Forms\ConfigureForm $configurationForm
+   *   The configuration form.
    * @param \Drupal\commerce_auspost\PostageAssessment\SupportedServices $supportedServices
    *   AusPost PAC supported services.
    * @param \Drupal\commerce_auspost\PostageAssessment\Client $client
@@ -109,6 +119,7 @@ class AusPost extends ShippingMethodBase {
     PackageTypeManagerInterface $packageTypeManager,
     LoggerInterface $watchdog,
     RounderInterface $rounder,
+    ConfigureForm $configurationForm,
     SupportedServices $supportedServices,
     Client $client
   ) {
@@ -122,6 +133,9 @@ class AusPost extends ShippingMethodBase {
     $this->rounder = $rounder;
     $this->supportedServices = $supportedServices;
     $this->client = $client;
+
+    $configurationForm->setShippingInstance($this);
+    $this->configurationForm = $configurationForm;
   }
 
   /**
@@ -141,6 +155,7 @@ class AusPost extends ShippingMethodBase {
       $container->get('plugin.manager.commerce_package_type'),
       $container->get('logger.channel.commerce_auspost'),
       $container->get('commerce_price.rounder'),
+      new ConfigureForm(),
       $container->get('commerce_auspost.postage_assessment.services'),
       $container->get('commerce_auspost.postage_assessment.client')
     );
@@ -276,112 +291,15 @@ class AusPost extends ShippingMethodBase {
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
-
-    // Select all services by default.
-    if (empty($this->configuration['services'])) {
-      $serviceIds = array_keys($this->services);
-      $this->configuration['services'] = array_combine($serviceIds, $serviceIds);
-    }
-
-    $form['api_information'] = [
-      '#type' => 'details',
-      '#title' => $this->t('API information'),
-      '#description' => $this->isConfigured() ? $this->t('Update your AusPost API information.') : $this->t('Fill in your AusPost API information.'),
-      '#weight' => $this->isConfigured() ? 10 : -10,
-      '#open' => !$this->isConfigured(),
-    ];
-    $form['api_information']['api_key'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('API key'),
-      '#description' => $this->t('Enter your AusPost API key.'),
-      '#default_value' => $this->configuration['api_information']['api_key'],
-    ];
-
-    $form['options'] = [
-      '#type' => 'details',
-      '#title' => $this->t('AusPost Options'),
-      '#description' => $this->t('Additional options for AusPost'),
-    ];
-    $form['options']['packaging'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Packaging strategy'),
-      '#description' => $this->t('Select your packaging strategy. "All items in one box" will ignore package type and product dimensions, and assume all items go in one box. "Each item in its own box" will create a box for each line item in the order, "Calculate" will attempt to figure out how many boxes are needed based on package type volumes and product volumes, similar to commerce_auspost 7.x.'),
-      '#options' => [
-        static::PACKAGE_ALL_IN_ONE => $this->t('All items in one box'),
-        static::PACKAGE_INDIVIDUAL => $this->t('Each item in its own box'),
-        static::PACKAGE_CALCULATE => $this->t('Calculate'),
-      ],
-      '#default_value' => $this->configuration['options']['packaging'],
-    ];
-    $form['options']['insurance'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Include insurance'),
-      '#description' => $this->t('Include insurance value of shippable line items in AusPost rate requests'),
-      '#default_value' => $this->configuration['options']['insurance'],
-    ];
-    $form['options']['rate_multiplier'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Rate multiplier'),
-      '#description' => $this->t('A number that each rate returned from AusPost will be multiplied by. For example, enter 1.5 to mark up shipping costs to 150%.'),
-      '#min' => 0.1,
-      '#step' => 0.1,
-      '#size' => 5,
-      '#default_value' => $this->configuration['options']['rate_multiplier'],
-    ];
-    $form['options']['round'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Round type'),
-      '#description' => $this->t('Choose how the shipping rate should be rounded.'),
-      '#options' => [
-        PHP_ROUND_HALF_UP => 'Half up',
-        PHP_ROUND_HALF_DOWN => 'Half down',
-        PHP_ROUND_HALF_EVEN => 'Half even',
-        PHP_ROUND_HALF_ODD => 'Half odd',
-      ],
-      '#default_value' => $this->configuration['options']['round'],
-    ];
-    $form['options']['log'] = [
-      '#type' => 'checkboxes',
-      '#title' => $this->t('Log the following messages for debugging'),
-      '#options' => [
-        'request' => $this->t('API request messages'),
-        'response' => $this->t('API response messages'),
-      ],
-      '#default_value' => $this->configuration['options']['log'],
-    ];
-
-    return $form;
+    return $this->configurationForm->buildForm($form, $form_state);
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    if (!$form_state->getErrors()) {
-      $values = $this->value($form_state->getValue($form['#parents']));
-
-      $this->configuration['api_information']['api_key'] = $values['api_information']['api_key'];
-      $this->configuration['options']['packaging'] = $values['options']['packaging'];
-      $this->configuration['options']['insurance'] = $values['options']['insurance'];
-      $this->configuration['options']['rate_multiplier'] = $values['options']['rate_multiplier'];
-      $this->configuration['options']['round'] = $values['options']['round'];
-      $this->configuration['options']['log'] = $values['options']['log'];
-    }
-
+    $this->configurationForm->submitForm($form, $form_state);
     parent::submitConfigurationForm($form, $form_state);
-  }
-
-  /**
-   * Converts a variable reference to a copy of that variable.
-   *
-   * @param mixed $value
-   *   Reference to copy.
-   *
-   * @return mixed
-   *   De-referenced value.
-   */
-  private function value($value) {
-    return $value;
   }
 
 }
