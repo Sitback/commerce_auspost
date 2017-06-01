@@ -263,24 +263,14 @@ class AusPost extends ShippingMethodBase {
       $packageTypes = $this->getEnabledPackageTypes(
         $definition['destination']
       );
-      $packer = $this->container->get('commerce_auspost.shipment_packer');
       $postagePrice = new Price(0, static::AUD_CURRENCY_CODE);
 
-      // Get rates for each packed box.
-      foreach ($packageTypes as $packageType) {
-        try {
-          $packer->addPackageType($packageType, $definition['destination']);
-        } catch (ShipmentPackerException $e) {
-          $this->logException($e, 'Invalid package type skipped.');
-          // Ignore invalid packages.
-          continue;
-        }
-      }
-
-      $packer->addOrderItems($shipment->getOrder()->getItems());
-
       try {
-        $packedBoxes = $packer->pack();
+        $packedBoxes = $this->getPackedBoxes(
+          $packageTypes,
+          $shipment->getOrder()->getItems(),
+          $definition
+        );
       } catch (ItemTooLargeException $e) {
         $this->logException($e, 'No package type large enough could be found.');
         continue;
@@ -315,7 +305,7 @@ class AusPost extends ShippingMethodBase {
 
         // Apply any modifiers to the postage cost if necessary.
         $postagePrice = $postagePrice->add(
-          $this->calculatePostageCost(
+          $this->getModifiedPostageCost(
             new Price($postage, static::AUD_CURRENCY_CODE)
           )
         );
@@ -443,6 +433,46 @@ class AusPost extends ShippingMethodBase {
   }
 
   /**
+   * Packs order items into boxes and returns the packed boxes.
+   *
+   * @param array[] $packageTypes
+   *   A list package type to use for packing.
+   * @param \Drupal\commerce_order\Entity\OrderItemInterface[] $orderItems
+   *   A list of purchased order items.
+   * @param array $service
+   *   Shipping service definition.
+   *
+   * @return \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox[]
+   *   A list of packed boxes.
+   *
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
+   */
+  private function getPackedBoxes(
+    array $packageTypes,
+    array $orderItems,
+    array $service
+  ) {
+    $packer = $this->container->get('commerce_auspost.shipment_packer');
+
+    // Get rates for each packed box.
+    foreach ($packageTypes as $packageType) {
+      try {
+        $packer->addPackageType($packageType, $service['destination']);
+      } catch (ShipmentPackerException $e) {
+        $this->logException($e, 'Invalid package type skipped.');
+        // Ignore invalid packages.
+        continue;
+      }
+    }
+
+    $packer->addOrderItems($orderItems);
+
+    return $packer->pack();
+  }
+
+  /**
    * Applies any multipliers or roundings to the raw postage cost.
    *
    * @param \Drupal\commerce_price\Price $postage
@@ -456,7 +486,7 @@ class AusPost extends ShippingMethodBase {
    *
    * @throws \InvalidArgumentException
    */
-  private function calculatePostageCost(Price $postage) {
+  private function getModifiedPostageCost(Price $postage) {
     // Get rounding and multiplier from configuration.
     $multiplier = 1.0;
     if (!empty($this->configuration['options']['rate_multiplier'])) {
