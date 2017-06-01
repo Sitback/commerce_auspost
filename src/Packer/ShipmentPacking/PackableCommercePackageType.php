@@ -3,7 +3,6 @@
 namespace Drupal\commerce_auspost\Packer\ShipmentPacking;
 
 use Drupal\commerce_auspost\PostageServices\PackageSizeException;
-use Drupal\commerce_auspost\PostageServices\ServiceDefinitions;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\physical\Length;
@@ -176,15 +175,9 @@ class PackableCommercePackageType implements Box {
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
    */
   public function getMaxWeight() {
-    if ($this->isDomestic) {
-      $dimensions = $this->serviceSupport->getMaxParcelDimensions(
-        ServiceDefinitions::SERVICE_DEST_DOMESTIC
-      );
-    } else {
-      $dimensions = $this->serviceSupport->getMaxParcelDimensions(
-        ServiceDefinitions::SERVICE_DEST_INTERNATIONAL
-      );
-    }
+    $dimensions = $this->serviceSupport->getMaxParcelDimensions(
+      $this->destination
+    );
 
     /** @var \Drupal\physical\Measurement[] $dimensions */
     return $dimensions['weight']->convert(WeightUnit::GRAM)
