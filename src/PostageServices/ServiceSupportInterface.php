@@ -3,6 +3,8 @@
 namespace Drupal\commerce_auspost\PostageServices;
 
 use Drupal\physical\Length;
+use Drupal\physical\Volume;
+use Drupal\physical\Weight;
 
 /**
  * Defines AusPost service support helpers.
@@ -121,6 +123,30 @@ interface ServiceSupportInterface {
    *   If package destination is not valid.
    */
   public function getMaxParcelDimensions($destination);
+
+  /**
+   * Calculates a parcel's cubic weight, as per AusPost's guidelines.
+   *
+   * @param \Drupal\physical\Volume $volume
+   *   Current package volume.
+   *
+   * @return \Drupal\physical\Weight
+   *   Cubic weight.
+   */
+  public function calculateParcelCubicWeight(Volume $volume);
+
+  /**
+   * Get a parcel's shipping weight - the actual weight or the cubic weight.
+   *
+   * @param \Drupal\physical\Volume $volume
+   *   Current package volume.
+   * @param \Drupal\physical\Weight $weight
+   *   The actual weight of the parcel.
+   *
+   * @return \Drupal\physical\Weight
+   *   Shipping weight.
+   */
+  public function calculateParcelWeight(Volume $volume, Weight $weight);
 
   /**
    * Confirm that a package meets AusPost's size guidelines.

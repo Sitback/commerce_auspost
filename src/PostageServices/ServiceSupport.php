@@ -6,6 +6,8 @@ use Drupal\physical\Length;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\Volume;
 use Drupal\physical\VolumeUnit;
+use Drupal\physical\Weight;
+use Drupal\physical\WeightUnit;
 
 /**
  * Defines some AusPost service support helpers.
@@ -175,6 +177,32 @@ class ServiceSupport implements ServiceSupportInterface {
   /**
    * {@inheritdoc}
    */
+  public function calculateParcelCubicWeight(Volume $volume) {
+    // Calculate cubic weight as per AusPost guidelines.
+    $cubicWeightNumber = bcmul(
+      ServiceDefinitions::CUBIC_WEIGHT_DENSITY,
+      $volume->convert(VolumeUnit::CUBIC_METER)->getNumber()
+    );
+    return new Weight($cubicWeightNumber, WeightUnit::KILOGRAM);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function calculateParcelWeight(Volume $volume, Weight $weight) {
+    $cubicWeight = $this->calculateParcelCubicWeight($volume);
+
+    // Use cubic weight if it's greater than the parcel's weight.
+    if ($cubicWeight->greaterThan($weight)) {
+      $weight = $cubicWeight;
+    }
+
+    return $weight;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function validatePackageSize(
     Length $length,
     Length $width,
@@ -218,6 +246,15 @@ class ServiceSupport implements ServiceSupportInterface {
       if ($max['volume']->lessThan($volume)) {
         throw new PackageSizeException(
           "Package volume ({$volume}) is greater than the AusPost maximum of '{$max['volume']}'."
+        );
+      }
+
+      // Make sure the package doesn't have a cubic weight greater than the
+      // AusPost guidelines.
+      $cubicWeight = $this->calculateParcelCubicWeight($volume);
+      if ($max['weight']->lessThan($cubicWeight)) {
+        throw new PackageSizeException(
+          "Package cubic weight ({$cubicWeight}) is greater than the AusPost maximum of '{$max['weight']}'."
         );
       }
     } else {

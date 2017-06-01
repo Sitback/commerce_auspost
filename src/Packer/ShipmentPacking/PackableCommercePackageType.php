@@ -175,11 +175,11 @@ class PackableCommercePackageType implements Box {
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
    */
   public function getMaxWeight() {
+    /** @var \Drupal\physical\Measurement[] $dimensions */
     $dimensions = $this->serviceSupport->getMaxParcelDimensions(
       $this->destination
     );
 
-    /** @var \Drupal\physical\Measurement[] $dimensions */
     return $dimensions['weight']->convert(WeightUnit::GRAM)
       ->getNumber();
   }
