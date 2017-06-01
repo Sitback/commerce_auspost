@@ -48,4 +48,12 @@ interface PackedBoxInterface {
    */
   public function getHeight();
 
+  /**
+   * Get box volume.
+   *
+   * @return \Drupal\physical\Volume
+   *   Box volume.
+   */
+  public function getVolume();
+
 }

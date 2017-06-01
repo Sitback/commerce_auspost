@@ -189,14 +189,21 @@ class Request implements RequestInterface {
   public function getDimensions() {
     $weight = $this->getPackedBox()
       ->getWeight()
-      ->convert(WeightUnit::KILOGRAM)
-      ->getNumber();
+      ->convert(WeightUnit::KILOGRAM);
+
+    // Get shipping weight, which is either the actual weight or the cubic
+    // weight of the parcel, whichever is greater.
+    /** @var \Drupal\physical\Weight $shippingWeight */
+    $shippingWeight = $this->serviceSupport->calculateParcelWeight(
+      $this->getPackedBox()->getVolume(),
+      $weight
+    );
 
     $dimensions = [
       'length' => $this->getPackedDimension('length'),
       'width' => $this->getPackedDimension('width'),
       'height' => $this->getPackedDimension('height'),
-      'weight' => $weight,
+      'weight' => $shippingWeight->getNumber(),
     ];
 
     return $dimensions;

@@ -190,10 +190,13 @@ class ServiceSupport implements ServiceSupportInterface {
    * {@inheritdoc}
    */
   public function calculateParcelWeight(Volume $volume, Weight $weight) {
+    // Standardise weight unit.
+    $weight = $weight->convert(WeightUnit::KILOGRAM);
     $cubicWeight = $this->calculateParcelCubicWeight($volume);
+    $oneKg = new Weight('1', WeightUnit::KILOGRAM);
 
     // Use cubic weight if it's greater than the parcel's weight.
-    if ($cubicWeight->greaterThan($weight)) {
+    if ($weight->greaterThan($oneKg) &&  $cubicWeight->greaterThan($weight)) {
       $weight = $cubicWeight;
     }
 

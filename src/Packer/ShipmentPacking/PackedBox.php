@@ -5,6 +5,8 @@ namespace Drupal\commerce_auspost\Packer\ShipmentPacking;
 use BadMethodCallException;
 use Drupal\physical\Length;
 use Drupal\physical\LengthUnit;
+use Drupal\physical\Volume;
+use Drupal\physical\VolumeUnit;
 use Drupal\physical\Weight;
 use Drupal\physical\WeightUnit;
 use DVDoug\BoxPacker\PackedBox as RawPackedBox;
@@ -108,6 +110,16 @@ class PackedBox implements PackedBoxInterface {
     return new Length(
       $this->box->getBox()->getInnerDepth(),
       LengthUnit::MILLIMETER
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getVolume() {
+    return new Volume(
+      $this->box->getBox()->getInnerVolume(),
+      VolumeUnit::CUBIC_MILLIMETER
     );
   }
 

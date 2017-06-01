@@ -165,8 +165,8 @@ class PackableCommercePackageType implements Box {
     $length = $this->getConvertedDimension('length', FALSE);
     $height = $this->getConvertedDimension('height', FALSE);
 
-    $volume = bcmul($width, bcmul($length, $height, 0), 0);
-    return (int) $volume;
+    $volume = bcmul($width, bcmul($length, $height));
+    return (int) ceil((float) $volume);
   }
 
   /**
