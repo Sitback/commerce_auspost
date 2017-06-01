@@ -19,9 +19,33 @@ interface PackedBoxInterface {
   /**
    * Get packed weight.
    *
-   * @return \Drupal\physical\WeightUnit
+   * @return \Drupal\physical\Weight
    *   Packed weight as a measurement.
    */
   public function getWeight();
+
+  /**
+   * Get box length.
+   *
+   * @return \Drupal\physical\Length
+   *   Box length.
+   */
+  public function getLength();
+
+  /**
+   * Get box width.
+   *
+   * @return \Drupal\physical\Length
+   *   Box width.
+   */
+  public function getWidth();
+
+  /**
+   * Get box height.
+   *
+   * @return \Drupal\physical\Length
+   *   Box height (depth).
+   */
+  public function getHeight();
 
 }

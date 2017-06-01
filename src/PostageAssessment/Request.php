@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\physical\LengthUnit;
@@ -13,6 +14,13 @@ use Drupal\physical\WeightUnit;
  * @package Drupal\commerce_auspost\PostageAssessment
  */
 class Request implements RequestInterface {
+
+  /**
+   * Packed box.
+   *
+   * @var \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox
+   */
+  private $packedBox;
 
   /**
    * Package type, one of 'parcel' or 'letter'.
@@ -86,6 +94,24 @@ class Request implements RequestInterface {
   /**
    * {@inheritdoc}
    */
+  public function setPackedBox(PackedBox $box) {
+    $this->packedBox = $box;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPackedBox() {
+    if ($this->packedBox === NULL) {
+      throw new RequestException('Packed box is not set.');
+    }
+    return $this->packedBox;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function setAddress($address) {
     $this->address = $address;
     return $this;
@@ -141,7 +167,7 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function isDomestic() {
-    $isDomestic = $this->address->isDomestic();
+    $isDomestic = $this->getAddress()->isDomestic();
 
     if ($isDomestic === NULL) {
       throw new RequestException('Package destination could not be determined.');
@@ -161,30 +187,15 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function getDimensions() {
-    $package = $this->getShipment()->getPackageType();
-
-    // Round length, width & height up as AusPost expects whole numbers.
-    $length = (int) ceil(
-      (float) $package->getLength()
-      ->convert(LengthUnit::CENTIMETER)
-      ->getNumber()
-    );
-    $width = (int) ceil(
-      (float) $package->getWidth()
-      ->convert(LengthUnit::CENTIMETER)
-      ->getNumber()
-    );
-    $height = (int) ceil(
-      (float) $package->getHeight()
-      ->convert(LengthUnit::CENTIMETER)
-      ->getNumber()
-    );
-    $weight = $this->getTotalPackageWeight();
+    $weight = $this->getPackedBox()
+      ->getWeight()
+      ->convert(WeightUnit::KILOGRAM)
+      ->getNumber();
 
     $dimensions = [
-      'length' => $length,
-      'width' => $width,
-      'height' => $height,
+      'length' => $this->getPackedDimension('length'),
+      'width' => $this->getPackedDimension('width'),
+      'height' => $this->getPackedDimension('height'),
       'weight' => $weight,
     ];
 
@@ -222,40 +233,25 @@ class Request implements RequestInterface {
   }
 
   /**
-   * Get total package weight including weight of all items.
+   * Get a dimension value of the packed box in centimetres.
    *
-   * @return float
-   *   Total calculated package weight.
+   * @param string $name
+   *   Dimension name.
    *
-   * @throws \InvalidArgumentException
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   * @return int
+   *   Dimension value, rounded up where required.
+   *
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
-  private function getTotalPackageWeight() {
-    $package = $this->getShipment()->getPackageType();
+  private function getPackedDimension($name) {
+    $name = ucfirst($name);
+    $method = "get{$name}";
+    $number = $this->getPackedBox()
+      ->{$method}()
+      ->convert(LengthUnit::CENTIMETER)
+      ->getNumber();
 
-    // First get package weight (in case the packing box itself has a weight).
-    $weight = $package->getWeight()
-      ->convert(WeightUnit::KILOGRAM);
-
-    $orderItems = $this->getShipment()->getOrder()->getItems();
-    foreach ($orderItems as $orderItem) {
-      $purchasedEntity = $orderItem->getPurchasedEntity();
-      $orderItemWeights = $purchasedEntity->get('weight');
-
-      if (!$orderItemWeights->isEmpty()) {
-        /** @var \Drupal\physical\Plugin\Field\FieldType\MeasurementItem $orderItemWeight */
-        $orderItemWeight = $orderItemWeights->first();
-
-        $totalItemWeight = $orderItemWeight->toMeasurement()
-          ->convert(WeightUnit::KILOGRAM)
-          ->multiply($orderItem->getQuantity());
-
-        $weight = $weight->add($totalItemWeight);
-      }
-    }
-
-    return (float) $weight->getNumber();
+    return (int) ceil((float) $number);
   }
 
 }

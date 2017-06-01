@@ -5,8 +5,8 @@ namespace Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod;
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\ConfigurationException;
 use Drupal\commerce_auspost\Forms\ConfigureForm;
+use Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException;
 use Drupal\commerce_auspost\PostageAssessment\ClientInterface;
-use Drupal\commerce_auspost\PostageAssessment\Request;
 use Drupal\commerce_auspost\PostageAssessment\RequestInterface;
 use Drupal\commerce_auspost\PostageAssessment\ResponseException;
 use Drupal\commerce_auspost\PostageAssessment\ResponseInterface;
@@ -19,6 +19,7 @@ use Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase;
 use Drupal\commerce_shipping\ShippingRate;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Utility\Error;
+use DVDoug\BoxPacker\ItemTooLargeException;
 use Exception;
 use Guzzle\Http\Exception\ClientErrorResponseException;
 use Psr\Log\LoggerInterface;
@@ -45,15 +46,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class AusPost extends ShippingMethodBase {
-
-  // Package all items in one box, ignoring dimensions.
-  const PACKAGE_ALL_IN_ONE = 'allinone';
-
-  // Package each line item in its own box, ignoring dimensions.
-  const PACKAGE_INDIVIDUAL = 'individual';
-
-  // Calculate volume to determine how many boxes are needed.
-  const PACKAGE_CALCULATE = 'calculate';
 
   // Currency code.
   const AUD_CURRENCY_CODE = 'AUD';
@@ -168,6 +160,7 @@ class AusPost extends ShippingMethodBase {
       $configuration,
       $pluginId,
       $pluginDefinition,
+      $container,
       $container->get('plugin.manager.commerce_package_type'),
       $container->get('logger.channel.commerce_auspost'),
       $container->get('commerce_price.rounder'),
@@ -235,6 +228,8 @@ class AusPost extends ShippingMethodBase {
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
+   * @throws \Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException
+   * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
@@ -260,39 +255,66 @@ class AusPost extends ShippingMethodBase {
     // Calculate postage for all services.
     $rates = [];
     foreach ($serviceDefinitions as $definitionKey => $definition) {
-      try {
-        $request = (new Request($this->serviceSupport))
-          ->setAddress($address)
-          ->setPackageType($definition['type'])
-          ->setShipment($shipment)
-          ->setServiceDefinition($definition);
-
-        // Log request if enabled.
-        $this->logApi('Sending AusPost PAC API request', $request);
-
-        $response = $this->client->calculatePostage($request);
-
-        // Log response as well.
-        $this->logApi('Received AusPost PAC API response', $response);
-      } catch (ClientErrorResponseException $e) {
-        $this->logException($e, 'Error fetching rates from AusPost.');
-        continue;
-      }
-
-      try {
-        $postage = (string) $response->getPostage();
-      } catch (ResponseException $e) {
-        $this->logException($e, 'Error fetching rates from AusPost.');
-        continue;
-      }
-
-      // Apply any modifiers to the postage cost if necessary.
-      $postagePrice = $this->calculatePostageCost(
-        new Price(
-          $postage,
-          static::AUD_CURRENCY_CODE
-        )
+      $packageTypes = $this->getEnabledPackageTypes(
+        $definition['destination']
       );
+      $packer = $this->container->get('commerce_auspost.shipment_packer');
+      $postagePrice = new Price(0, static::AUD_CURRENCY_CODE);
+
+      // Get rates for each packed box.
+      foreach ($packageTypes as $packageType) {
+        try {
+          $packer->addPackageType($packageType, $definition['destination']);
+        } catch (ShipmentPackerException $e) {
+          $this->logException($e, 'Invalid package type skipped.');
+          // Ignore invalid packages.
+          continue;
+        }
+      }
+
+      $packer->addOrderItems($shipment->getOrder()->getItems());
+
+      try {
+        $packedBoxes = $packer->pack();
+      } catch (ItemTooLargeException $e) {
+        $this->logException($e, 'No package type large enough could be found.');
+        continue;
+      }
+
+      foreach ($packedBoxes as $packedBox) {
+        try {
+          $request = $this->container->get('commerce_auspost.postage_assessment.request')
+            ->setAddress($address)
+            ->setShipment($shipment)
+            ->setPackedBox($packedBox)
+            ->setPackageType($definition['type'])
+            ->setServiceDefinition($definition);
+          // Log request if enabled.
+          $this->logApi('Sending AusPost PAC API request', $request);
+
+          $response = $this->client->calculatePostage($request);
+
+          // Log response as well.
+          $this->logApi('Received AusPost PAC API response', $response);
+
+          $postage = (string) $response->getPostage();
+        } catch (ClientErrorResponseException $e) {
+          $this->logException($e, 'Error fetching rates from AusPost.');
+          // Skip this service.
+          continue 2;
+        } catch (ResponseException $e) {
+          $this->logException($e, 'Error fetching rates from AusPost.');
+          // Skip this service.
+          continue 2;
+        }
+
+        // Apply any modifiers to the postage cost if necessary.
+        $postagePrice = $postagePrice->add(
+          $this->calculatePostageCost(
+            new Price($postage, static::AUD_CURRENCY_CODE)
+          )
+        );
+      }
 
       $rates[] = new ShippingRate(
         $definitionKey,
@@ -314,7 +336,6 @@ class AusPost extends ShippingMethodBase {
         'api_key' => '',
       ],
       'options' => [
-        'packaging' => static::PACKAGE_ALL_IN_ONE,
         'insurance' => FALSE,
         'rate_multiplier' => 1.0,
         'round' => PHP_ROUND_HALF_UP,
@@ -369,7 +390,7 @@ class AusPost extends ShippingMethodBase {
       return $types;
     }
 
-    if (!in_array($dest, $this->serviceSupport->supportedDestinations(), true)) {
+    if (!$this->serviceSupport->validateDestination($dest)) {
       throw new ConfigurationException("Unknown package destination '{$dest}'.");
     }
 

@@ -2,6 +2,8 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
+
 /**
  * Defines an interface to create a new PAC request.
  *
@@ -30,6 +32,26 @@ interface RequestInterface {
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
   public function getPackageType();
+
+  /**
+   * Set packed box.
+   *
+   * @param \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox $box
+   *   Packed box.
+   *
+   * @return $this
+   */
+  public function setPackedBox(PackedBox $box);
+
+  /**
+   * Get packed box.
+   *
+   * @return \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox
+   *   Packed box.
+   *
+   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   */
+  public function getPackedBox();
 
   /**
    * Set the order address.
