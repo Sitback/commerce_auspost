@@ -10,18 +10,30 @@ services:
     arguments: []
 
   commerce_auspost.postage_assessment.request:
-      class: Drupal\commerce_auspost\PostageAssessment\Request
-      arguments: ['@commerce_auspost.postage_services.service_support']
-      shared: false
+    class: Drupal\commerce_auspost\PostageAssessment\Request
+    arguments: ['@commerce_auspost.postage_services.service_support']
+    shared: false
 
   commerce_auspost.postage_assessment.response:
-      class: Drupal\commerce_auspost\PostageAssessment\Response
-      arguments: []
-      shared: false
+    class: Drupal\commerce_auspost\PostageAssessment\Response
+    arguments: []
+    shared: false
 
   commerce_auspost.postage_assessment.client:
     class: Drupal\commerce_auspost\PostageAssessment\Client
     arguments: []
+
+  commerce_auspost.box_packer:
+    class: DVDoug\BoxPacker\Packer
+    arguments: []
+    shared: false
+
+  commerce_auspost.shipment_packer:
+    class: Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPacker
+    arguments:
+      - '@commerce_auspost.box_packer'
+      - '@commerce_auspost.postage_services.service_support'
+    shared: false
 
   logger.channel.commerce_auspost:
     parent: logger.channel_base

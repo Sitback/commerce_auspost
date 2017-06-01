@@ -145,18 +145,6 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       '#title' => $this->t('AusPost Options'),
       '#description' => $this->t('Additional options for AusPost'),
     ];
-    // @TODO: Implement packing logic variants.
-    // $form['options']['packaging'] = [
-    //   '#type' => 'select',
-    //   '#title' => $this->t('Packaging strategy'),
-    //   '#description' => $this->t('Select your packaging strategy. "All items in one box" will ignore package type and product dimensions, and assume all items go in one box. "Each item in its own box" will create a box for each line item in the order, "Calculate" will attempt to figure out how many boxes are needed based on package type volumes and product volumes, similar to commerce_auspost 7.x.'),
-    //   '#options' => [
-    //     AusPost::PACKAGE_ALL_IN_ONE => $this->t('All items in one box'),
-    //     AusPost::PACKAGE_INDIVIDUAL => $this->t('Each item in its own box'),
-    //     AusPost::PACKAGE_CALCULATE => $this->t('Calculate'),
-    //   ],
-    //   '#default_value' => $configuration['options']['packaging'],
-    // ];
     $form['options']['insurance'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Include insurance'),
@@ -207,8 +195,6 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
 
       $configuration['enabled_package_types'] = $values['enabled_package_types'];
       $configuration['api_information']['api_key'] = $values['api_information']['api_key'];
-      // @TODO add packaging variant support.
-      // $configuration['options']['packaging'] = $values['options']['packaging'];
       $configuration['options']['insurance'] = $values['options']['insurance'];
       $configuration['options']['rate_multiplier'] = $values['options']['rate_multiplier'];
       $configuration['options']['round'] = $values['options']['round'];

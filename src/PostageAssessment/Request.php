@@ -65,8 +65,7 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function setPackageType($packageType) {
-    $allowedTypes = $this->serviceSupport->supportedPackageTypes();
-    if (!in_array($packageType, $allowedTypes, true)) {
+    if (!$this->serviceSupport->validatePackageType($packageType)) {
       throw new RequestException("Unknown package type '{$packageType}'.");
     }
 

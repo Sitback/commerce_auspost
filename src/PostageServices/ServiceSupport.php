@@ -2,37 +2,27 @@
 
 namespace Drupal\commerce_auspost\PostageServices;
 
+use Drupal\physical\Length;
+use Drupal\physical\LengthUnit;
+use Drupal\physical\Volume;
+use Drupal\physical\VolumeUnit;
+
 /**
  * Defines some AusPost service support helpers.
  *
  * @package Drupal\commerce_auspost\PostageAssessment
  */
-class ServiceSupport {
+class ServiceSupport implements ServiceSupportInterface {
 
   /**
-   * Check if a service exists.
-   *
-   * @param string $key
-   *   Service key.
-   *
-   * @return bool
-   *   TRUE if the service exists, FALSE otherwise.
+   * {@inheritdoc}
    */
   public function hasService($key) {
     return array_key_exists($key, ServiceDefinitions::services());
   }
 
   /**
-   * Get service definition.
-   *
-   * @param string $key
-   *   Service key.
-   *
-   * @return array
-   *   Service definition.
-   *
-   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
-   *   If requested service doesn't exist.
+   * {@inheritdoc}
    */
   public function getService($key) {
     if ($this->hasService($key)) {
@@ -42,18 +32,7 @@ class ServiceSupport {
   }
 
   /**
-   * Get all defined services, optionally filtered by type and destination.
-   *
-   * @param string|null $type
-   *   Service type, one of 'parcel' or 'letter'.
-   * @param string|null $dest
-   *   Service destination, one of 'domestic' or 'international'.
-   *
-   * @return array
-   *   All requested service definitions.
-   *
-   * @throws ServiceNotFoundException
-   *   If an invalid service type or destination was provided.
+   * {@inheritdoc}
    */
   public function getServices($type = NULL, $dest = NULL) {
     $services = ServiceDefinitions::services();
@@ -125,17 +104,7 @@ class ServiceSupport {
   }
 
   /**
-   * Retrieves service definitions for a set of service keys.
-   *
-   * @param array $keys
-   *   A set of service keys to return definitions for.
-   * @param bool $ignoreNonExisting
-   *   If TRUE, any 'not found' errors will be ignored.
-   *
-   * @return array
-   *   Service definitions keyed by service key.
-   *
-   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
+   * {@inheritdoc}
    */
   public function getServicesByKeys(array $keys, $ignoreNonExisting = FALSE) {
     $services = [];
@@ -155,10 +124,7 @@ class ServiceSupport {
   }
 
   /**
-   * Get all supported package types.
-   *
-   * @return array
-   *   A list of all supported package types.
+   * {@inheritdoc}
    */
   public function supportedPackageTypes() {
     return [
@@ -168,10 +134,7 @@ class ServiceSupport {
   }
 
   /**
-   * Get all supported destinations.
-   *
-   * @return array
-   *   A list of all supported destinations.
+   * {@inheritdoc}
    */
   public function supportedDestinations() {
     return [
@@ -181,17 +144,21 @@ class ServiceSupport {
   }
 
   /**
-   * Maximum package dimensions supported by AusPost.
-   *
-   * @param string $destination
-   *   Package destination.
-   *
-   * @return array
-   *   An array with one or more of the following keys: length, weight, volume,
-   *   girth.
-   *
-   * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
-   *   If package destination is not valid.
+   * {@inheritdoc}
+   */
+  public function validateDestination($destination) {
+    return in_array($destination, $this->supportedDestinations(), true);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validatePackageType($type) {
+    return in_array($type, $this->supportedPackageTypes(), true);
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getMaxParcelDimensions($destination) {
     $dimensions = ServiceDefinitions::maxParcelDimensions();
@@ -203,6 +170,83 @@ class ServiceSupport {
     throw new ServiceSupportException(
       "Unknown package destination '{$destination}'."
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validatePackageSize(
+    Length $length,
+    Length $width,
+    Length $height,
+    $destination
+  ) {
+    $isDomestic = $destination === ServiceDefinitions::SERVICE_DEST_DOMESTIC;
+    /** @var \Drupal\physical\Measurement[] $max */
+    $max = $this->getMaxParcelDimensions($destination);
+
+    // Convert all units where required.
+    $length = $length->convert(LengthUnit::CENTIMETER);
+    $width = $width->convert(LengthUnit::CENTIMETER);
+    $height = $height->convert(LengthUnit::CENTIMETER);
+
+    // All destinations have length requirements, confirm that no edge of the
+    // package exceeds this.
+    if (
+      $max['length']->lessThan($width) ||
+      $max['length']->lessThan($length) ||
+      $max['length']->lessThan($height)
+    ) {
+      throw new PackageSizeException(
+        "Package width, length or height are greater than the AusPost maximum of '{$max['length']}'."
+      );
+    }
+
+    // Domestic packages have volume requirements.
+    if ($isDomestic) {
+      // Volume is calculated in m^3.
+      $widthNumber = $width->convert(LengthUnit::METER)
+        ->getNumber();
+      $heightNumber = $height->convert(LengthUnit::METER)
+        ->getNumber();
+
+      $volumeCalc = $length->convert(LengthUnit::METER)
+        ->multiply($widthNumber)
+        ->multiply($heightNumber);
+      $volume = new Volume($volumeCalc->getNumber(), VolumeUnit::CUBIC_METER);
+
+      if ($max['volume']->lessThan($volume)) {
+        throw new PackageSizeException(
+          "Package volume ({$volume}) is greater than the AusPost maximum of '{$max['volume']}'."
+        );
+      }
+    } else {
+      // International packages have girth requirements,
+      // (where girth = ((width + height) * 2)).
+      // Each package edge combination needs to be checked.
+      $girthVariations = [
+        ['width', 'height'],
+        ['width', 'length'],
+        ['length', 'height'],
+      ];
+      foreach ($girthVariations as list($fieldA, $fieldB)) {
+        /** @var \Drupal\physical\Length $fieldAVal */
+        $fieldAVal = ${$fieldA};
+        /** @var \Drupal\physical\Length $fieldBVal */
+        $fieldBVal = ${$fieldB};
+
+        $girth = $fieldAVal->add($fieldBVal)
+          ->multiply('2');
+
+        if ($max['girth']->lessThan($girth)) {
+          throw new PackageSizeException(
+            "Package girth ({$girth}, calculated using '{$fieldA}' and '{$fieldB}') is greater than the AusPost maximum of '{$max['girth']}'."
+          );
+        }
+      }
+    }
+
+    return TRUE;
   }
 
 }

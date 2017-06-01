@@ -32,10 +32,15 @@ final class ServiceDefinitions {
   // International services.
   const SERVICE_DEST_INTERNATIONAL = 'international';
 
+  // The density used by AusPost to calculate cubic weight.
+  const CUBIC_WEIGHT_DENSITY = 250;
+
   /**
    * Maximum package dimensions supported by AusPost.
    *
    * @see https://auspost.com.au/parcels-mail/postage-tips-guides/size-weight-guidelines
+   *
+   * @TODO Make this configurable with defaults.
    *
    * @return array
    *   A list of max package dimensions for each destination
