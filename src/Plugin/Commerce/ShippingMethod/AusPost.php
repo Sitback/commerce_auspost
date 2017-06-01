@@ -148,6 +148,9 @@ class AusPost extends ShippingMethodBase {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
   public static function create(
     ContainerInterface $container,
@@ -230,6 +233,8 @@ class AusPost extends ShippingMethodBase {
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
    * @throws \Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
