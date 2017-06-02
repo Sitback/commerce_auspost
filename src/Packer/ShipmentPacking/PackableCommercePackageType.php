@@ -47,7 +47,7 @@ class PackableCommercePackageType implements Box {
    * @param array $packageType
    *   The Commerce package type definition.
    * @param string $destination
-   *   Package destination
+   *   Package destination.
    *
    * @throws \Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException

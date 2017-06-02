@@ -6,6 +6,11 @@ use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinition
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Plugin\PluginBase;
 
+/**
+ * Derives service definitions from defined defaults.
+ *
+ * @package Drupal\commerce_auspost\Plugin\Deriver
+ */
 class ServiceDefinitionDeriver extends DeriverBase {
 
   /**

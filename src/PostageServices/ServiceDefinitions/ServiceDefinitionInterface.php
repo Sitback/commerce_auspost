@@ -12,9 +12,9 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
  * @package Drupal\commerce_auspost\PostageServices\ServiceDefinitions
  */
 interface ServiceDefinitionInterface extends
-  ContainerFactoryPluginInterface,
-  PluginInspectionInterface,
-  DerivativeInspectionInterface {
+    ContainerFactoryPluginInterface,
+    PluginInspectionInterface,
+    DerivativeInspectionInterface {
 
   /**
    * Get service ID.

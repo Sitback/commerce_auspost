@@ -111,12 +111,16 @@ class ShipmentPacker implements ShipmentPackerInterface {
    * @param \DVDoug\BoxPacker\PackedBoxList $boxes
    *   Boxes to wrap.
    *
+   * @codingStandardsIgnoreStart (Coder thinks Generator returns aren't valid.)
+   *
    * @return \Generator
    *   A generator that yields packed box instances.
+   *
+   * @codingStandardsIgnoreEnd
    */
   private function getPackedBoxes(PackedBoxList $boxes) {
     foreach ($boxes as $box) {
-      yield PackedBox::create($box);
+      yield new PackedBox($box);
     }
   }
 

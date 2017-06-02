@@ -14,9 +14,9 @@ class Client implements ClientInterface {
   /**
    * AusPost PAC API key.
    *
-   * @see https://developers.auspost.com.au/apis/pac/getting-started
-   *
    * @var string
+   *
+   * @see https://developers.auspost.com.au/apis/pac/getting-started
    */
   private $apiKey;
 
@@ -56,7 +56,7 @@ class Client implements ClientInterface {
 
     if ($this->client === NULL) {
       $this->client = Auspost::factory([
-        'developer_mode' => true,
+        'developer_mode' => TRUE,
         'auth_key' => $this->apiKey,
       ])->get('postage');
     }
@@ -77,7 +77,8 @@ class Client implements ClientInterface {
     if ($request->isDomestic()) {
       $opts['from_postcode'] = $address->getShipperPostcode();
       $opts['to_postcode'] = $address->getRecipientPostcode();
-    } else {
+    }
+    else {
       $opts['country_code'] = $address->getRecipientCountrycode();
     }
 
@@ -102,12 +103,14 @@ class Client implements ClientInterface {
     $method = 'calculate';
     if ($request->isDomestic()) {
       $method .= 'Domestic';
-    } else {
+    }
+    else {
       $method .= 'International';
     }
     if ($request->isParcel()) {
       $method .= 'Parcel';
-    } else {
+    }
+    else {
       $method .= 'Letter';
     }
     $method .= 'Postage';

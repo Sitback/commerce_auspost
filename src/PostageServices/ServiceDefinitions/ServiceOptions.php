@@ -20,7 +20,7 @@ final class ServiceOptions extends AbstractEnum {
   // Domestic signature on delivery.
   const AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY = 'AUS_SERVICE_OPTION_SIGNATURE_ON_DELIVERY';
 
-  // Domestic delivery confirmation
+  // Domestic delivery confirmation.
   const AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION = 'AUS_SERVICE_OPTION_DELIVERY_CONFIRMATION';
 
   // Domestic registered post.
@@ -35,7 +35,9 @@ final class ServiceOptions extends AbstractEnum {
   // Domestic cash-on-delivery with payment for the item.
   const AUS_SERVICE_OPTION_COD_MONEY_COLLECTION = 'AUS_SERVICE_OPTION_COD_MONEY_COLLECTION';
 
+  // @codingStandardsIgnoreStart
   // const AUS_SERVICE_OPTION_COURIER_EXTRA_COVER_SERVICE = 'AUS_SERVICE_OPTION_COURIER_EXTRA_COVER_SERVICE';
+  // @codingStandardsIgnoreEnd
 
 
   // International tracking.

@@ -119,7 +119,8 @@ class ServiceSupport implements ServiceSupportInterface {
           "Package cubic weight ({$cubicWeight}) is greater than the AusPost maximum of '{$max['weight']}'."
         );
       }
-    } else {
+    }
+    else {
       // International packages have girth requirements,
       // (where girth = ((width + height) * 2)).
       // Each package edge combination needs to be checked.
@@ -128,6 +129,7 @@ class ServiceSupport implements ServiceSupportInterface {
         ['width', 'length'],
         ['length', 'height'],
       ];
+      // @codingStandardsIgnoreStart (coder thinks dynamic vars are undefined)
       foreach ($girthVariations as list($fieldA, $fieldB)) {
         /** @var \Drupal\physical\Length $fieldAVal */
         $fieldAVal = ${$fieldA};
@@ -143,6 +145,7 @@ class ServiceSupport implements ServiceSupportInterface {
           );
         }
       }
+      // @codingStandardsIgnoreEnd
     }
 
     return TRUE;

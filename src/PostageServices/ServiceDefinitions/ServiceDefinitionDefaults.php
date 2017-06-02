@@ -179,6 +179,7 @@ final class ServiceDefinitionDefaults {
         'sub_opt_code' => '',
         'extra_cover' => 5000,
       ],
+      // @codingStandardsIgnoreStart
       // Not working due to issues with AusPost.
       // 'INT_PAR_SEA_OWN_PACK_SIG_INS' => [
       //   'type' => ServiceTypes::self::PARCEL,
@@ -192,6 +193,7 @@ final class ServiceDefinitionDefaults {
       //   'sub_opt_code' => '',
       //   'extra_cover' => 5000,
       // ],
+      // @codingStandardsIgnoreEnd
       'INT_PARCEL_AIR_OWN_PACKAGING' => [
         'type' => ServiceTypes::PARCEL,
         'destination' => ServiceDestinations::INTERNATIONAL,
@@ -219,6 +221,7 @@ final class ServiceDefinitionDefaults {
         'sub_opt_code' => '',
         'extra_cover' => 5000,
       ],
+      // @codingStandardsIgnoreStart
       // Not working due to issues with AusPost.
       // 'INT_PAR_AIR_OWN_PACK_SIG_INS' => [
       //   'type' => ServiceTypes::self::PARCEL,
@@ -232,6 +235,7 @@ final class ServiceDefinitionDefaults {
       //   'sub_opt_code' => '',
       //   'extra_cover' => 5000,
       // ],
+      // @codingStandardsIgnoreEnd
       'INT_PARCEL_STD_OWN_PACKAGING' => [
         'type' => ServiceTypes::PARCEL,
         'destination' => ServiceDestinations::INTERNATIONAL,
@@ -259,6 +263,7 @@ final class ServiceDefinitionDefaults {
         'sub_opt_code' => '',
         'extra_cover' => 5000,
       ],
+      // @codingStandardsIgnoreStart
       // Not working due to issues with AusPost.
       // 'INT_PAR_STD_OWN_PACK_SIG_INS' => [
       //   'type' => ServiceTypes::self::PARCEL,
@@ -272,6 +277,7 @@ final class ServiceDefinitionDefaults {
       //   'sub_opt_code' => '',
       //   'extra_cover' => 5000,
       // ],
+      // @codingStandardsIgnoreEnd
       'INT_PARCEL_EXP_OWN_PACKAGING' => [
         'type' => ServiceTypes::PARCEL,
         'destination' => ServiceDestinations::INTERNATIONAL,
@@ -414,6 +420,7 @@ final class ServiceDefinitionDefaults {
           'weight' => 500,
         ],
       ],
+      // @codingStandardsIgnoreStart
       // Not working due to issues with AusPost.
       // 'L_AUS_LET_SM_REG_CONF_P2P' => [
       //   'type' => ServiceTypes::LETTER,
@@ -433,6 +440,7 @@ final class ServiceDefinitionDefaults {
       //     'weight' => 500,
       //   ],
       // ],
+      // @codingStandardsIgnoreEnd
       'L_AUS_LETTER_LG_REG_POST' => [
         'type' => ServiceTypes::LETTER,
         'destination' => ServiceDestinations::DOMESTIC,
@@ -478,6 +486,7 @@ final class ServiceDefinitionDefaults {
           'weight' => 500,
         ],
       ],
+      // @codingStandardsIgnoreStart
       // Not working due to issues with AusPost.
       // 'L_AUS_LET_LG_REG_CONF_P2P' => [
       //   'type' => ServiceTypes::LETTER,
@@ -497,6 +506,7 @@ final class ServiceDefinitionDefaults {
       //     'weight' => 500,
       //   ],
       // ],
+      // @codingStandardsIgnoreEnds
       'L_AUS_LETTER_SM_EXP_POST' => [
         'type' => ServiceTypes::LETTER,
         'destination' => ServiceDestinations::DOMESTIC,

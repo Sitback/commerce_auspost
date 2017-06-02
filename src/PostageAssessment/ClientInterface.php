@@ -26,6 +26,7 @@ interface ClientInterface {
    * Get the AusPost Postage client, instantiating if required.
    *
    * @return \Auspost\Postage\PostageClient
+   *   Instantiated client.
    *
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
    *   If an error occurs while instantiating the client.

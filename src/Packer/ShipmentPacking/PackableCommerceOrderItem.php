@@ -131,8 +131,8 @@ class PackableCommerceOrderItem implements Item {
   /**
    * Get the value of a particular dimension, optionally converting it.
    *
-   * @param $name
-   *   Name of the dimension (e.g. 'length');
+   * @param string $name
+   *   Name of the dimension (e.g. 'length').
    * @param string $convertTo
    *   The (optional) unit to convert the dimension value to.
    * @param bool $returnInt
@@ -144,7 +144,7 @@ class PackableCommerceOrderItem implements Item {
    * @throws \InvalidArgumentException
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
-  private function getDimension($name, $convertTo = NULL, $returnInt = true) {
+  private function getDimension($name, $convertTo = NULL, $returnInt = TRUE) {
     $purchasedEntity = $this->orderItem->getPurchasedEntity();
     $dimensionValues = $purchasedEntity->get('dimensions');
 

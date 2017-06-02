@@ -82,7 +82,7 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       $configuration['services'] = array_combine($serviceIds, $serviceIds);
     }
 
-    $selectPackageTypesIfDefault = function(array $types, &$config) {
+    $selectPackageTypesIfDefault = function (array $types, &$config) {
       if (empty($config)) {
         $packageTypeIds = array_keys($types);
         $config = array_combine(

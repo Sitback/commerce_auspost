@@ -53,36 +53,36 @@ class CommerceAusPostServiceDefinition extends Plugin {
   /**
    * The AusPost service code.
    *
-   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceCodes
-   *
    * @var string
+   *
+   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceCodes
    */
   public $serviceCode;
 
   /**
    * The (optional) AusPost option code.
    *
-   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
-   *
    * @var string
+   *
+   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
    */
   public $optionCode;
 
   /**
    * The secondary (optional) AusPost option code.
    *
-   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
-   *
    * @var string
+   *
+   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
    */
   public $subOptionCode;
 
   /**
    * The (optional) maximum extra cover amount (in whole AUD).
    *
-   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
-   *
    * @var int
+   *
+   * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceOptions
    */
   public $extraCover = 0;
 

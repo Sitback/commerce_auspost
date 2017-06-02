@@ -2,10 +2,12 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceTypes;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
+use Drupal\commerce_shipping\Entity\ShipmentInterface;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\WeightUnit;
 use InvalidArgumentException;
@@ -75,7 +77,8 @@ class Request implements RequestInterface {
   public function setPackageType($packageType) {
     try {
       ServiceTypes::assertExists($packageType);
-    } catch (InvalidArgumentException $e) {
+    }
+    catch (InvalidArgumentException $e) {
       throw new RequestException("Unknown package type '{$packageType}'.");
     }
 
@@ -114,7 +117,7 @@ class Request implements RequestInterface {
   /**
    * {@inheritdoc}
    */
-  public function setAddress($address) {
+  public function setAddress(Address $address) {
     $this->address = $address;
     return $this;
   }
@@ -132,7 +135,7 @@ class Request implements RequestInterface {
   /**
    * {@inheritdoc}
    */
-  public function setShipment($shipment) {
+  public function setShipment(ShipmentInterface $shipment) {
     $this->shipment = $shipment;
     return $this;
   }

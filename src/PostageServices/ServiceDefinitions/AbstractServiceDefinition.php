@@ -10,8 +10,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @package Drupal\commerce_auspost\PostageServices\ServiceDefinitions
  */
-abstract class AbstractServiceDefinition extends PluginBase
-  implements ServiceDefinitionInterface {
+abstract class AbstractServiceDefinition extends PluginBase implements
+    ServiceDefinitionInterface {
 
   /**
    * Service ID.

@@ -30,7 +30,10 @@ class Address {
   }
 
   /**
+   * Get the order address.
+   *
    * @return \Drupal\address\AddressInterface|\Drupal\Core\TypedData\TypedDataInterface
+   *   Order address
    *
    * @throws \InvalidArgumentException
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException

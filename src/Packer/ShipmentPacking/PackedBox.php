@@ -43,7 +43,7 @@ class PackedBox implements PackedBoxInterface {
    * @param \DVDoug\BoxPacker\PackedBox $box
    *   Underlying packed box instance.
    */
-  private function __construct(RawPackedBox $box) {
+  public function __construct(RawPackedBox $box) {
     $this->box = $box;
   }
 
@@ -67,13 +67,6 @@ class PackedBox implements PackedBoxInterface {
     }
 
     throw new BadMethodCallException("Method '{$name}' does not exist.");
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(RawPackedBox $box) {
-    return new static($box);
   }
 
   /**

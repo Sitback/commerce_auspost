@@ -2,19 +2,12 @@
 
 namespace Drupal\commerce_auspost\Packer\ShipmentPacking;
 
-use DVDoug\BoxPacker\PackedBox;
-
+/**
+ * Defines a packed box.
+ *
+ * @package Drupal\commerce_auspost\Packer\ShipmentPacking
+ */
 interface PackedBoxInterface {
-
-  /**
-   * Creates a new packed box instance.
-   *
-   * @param \DVDoug\BoxPacker\PackedBox $box
-   *   Raw backed box instance.
-   *
-   * @return \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBoxInterface
-   */
-  public static function create(PackedBox $box);
 
   /**
    * Get packed weight.

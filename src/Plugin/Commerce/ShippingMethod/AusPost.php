@@ -34,6 +34,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides the Australia Post shipping method.
  *
+ * @codingStandardsIgnoreStart
  * @CommerceShippingMethod(
  *   id = "auspost",
  *   label = @Translation("Australia Post"),
@@ -136,6 +137,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *        @Translation("Australia Post International Courier Letter (Insured) - 2+ Days")
  *   }
  * )
+ * @codingStandardsIgnoreEnd
  */
 class AusPost extends ShippingMethodBase {
 
@@ -285,7 +287,8 @@ class AusPost extends ShippingMethodBase {
     if ($data instanceof RequestInterface &&
         array_key_exists('request', $config['options']['log'])) {
       $doLog = TRUE;
-    } elseif ($data instanceof ResponseInterface &&
+    }
+    elseif ($data instanceof ResponseInterface &&
               array_key_exists('response', $config['options']['log'])) {
       $doLog = TRUE;
     }
@@ -311,7 +314,8 @@ class AusPost extends ShippingMethodBase {
     $defaultMessage = '%type: @message in %function (line %line of %file).';
     if (!empty($message)) {
       $message = "{$defaultMessage} {$message}";
-    } else {
+    }
+    else {
       $message = $defaultMessage;
     }
 
@@ -373,7 +377,8 @@ class AusPost extends ShippingMethodBase {
           $shipment->getOrder()->getItems(),
           $serviceDefinition
         );
-      } catch (ItemTooLargeException $e) {
+      }
+      catch (ItemTooLargeException $e) {
         $this->logException($e, 'No package type large enough could be found.');
         continue;
       }
@@ -395,11 +400,13 @@ class AusPost extends ShippingMethodBase {
           $this->logApi('Received AusPost PAC API response', $response);
 
           $postage = (string) $response->getPostage();
-        } catch (ClientErrorResponseException $e) {
+        }
+        catch (ClientErrorResponseException $e) {
           $this->logException($e, 'Error fetching rates from AusPost.');
           // Skip this service.
           continue 2;
-        } catch (ResponseException $e) {
+        }
+        catch (ResponseException $e) {
           $this->logException($e, 'Error fetching rates from AusPost.');
           // Skip this service.
           continue 2;
@@ -496,12 +503,13 @@ class AusPost extends ShippingMethodBase {
 
     try {
       ServiceDestinations::assertExists($dest);
-    } catch (InvalidArgumentException $e) {
+    }
+    catch (InvalidArgumentException $e) {
       throw new ConfigurationException("Unknown package destination '{$dest}'.");
     }
 
     // Filter out any destination-specific packages.
-    return array_filter($types, function($typeKey) use ($dest) {
+    return array_filter($types, function ($typeKey) use ($dest) {
       // Ignore any custom types.
       if (strpos($typeKey, 'commerce_auspost') !== 0) {
         return TRUE;
@@ -571,7 +579,8 @@ class AusPost extends ShippingMethodBase {
     foreach ($packageTypes as $packageType) {
       try {
         $packer->addPackageType($packageType, $service->getDestination());
-      } catch (ShipmentPackerException $e) {
+      }
+      catch (ShipmentPackerException $e) {
         $this->logException($e, 'Invalid package type skipped.');
         // Ignore invalid packages.
         continue;

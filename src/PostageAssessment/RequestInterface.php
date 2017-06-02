@@ -2,8 +2,10 @@
 
 namespace Drupal\commerce_auspost\PostageAssessment;
 
+use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
+use Drupal\commerce_shipping\Entity\ShipmentInterface;
 
 /**
  * Defines an interface to create a new PAC request.
@@ -62,7 +64,7 @@ interface RequestInterface {
    *
    * @return $this
    */
-  public function setAddress($address);
+  public function setAddress(Address $address);
 
   /**
    * Get order address.
@@ -82,12 +84,12 @@ interface RequestInterface {
    *
    * @return $this
    */
-  public function setShipment($shipment);
+  public function setShipment(ShipmentInterface $shipment);
 
   /**
    * Get order shipment.
    *
-   * @return \Drupal\commerce_shipping\Entity\ShipmentInterface Order shipment.
+   * @return \Drupal\commerce_shipping\Entity\ShipmentInterface
    *   Order shipment.
    *
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException

@@ -15,7 +15,7 @@ interface ResponseInterface {
    * @param \Drupal\commerce_auspost\PostageAssessment\RequestInterface $request
    *   API request.
    *
-   * @return $this;
+   * @return $this
    */
   public function setRequest(RequestInterface $request);
 
@@ -28,9 +28,9 @@ interface ResponseInterface {
   public function getRequest();
 
   /**
-   * Set raw API response from the AusPost library
+   * Set raw API response from the AusPost library.
    *
-   * @param $response array
+   * @param array $response
    *   Raw API response from the AusPost library.
    *
    * @return $this

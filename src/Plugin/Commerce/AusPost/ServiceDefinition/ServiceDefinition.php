@@ -2,7 +2,6 @@
 
 namespace Drupal\commerce_auspost\Plugin\Commerce\AusPost\ServiceDefinition;
 
-use Drupal\commerce_auspost\Annotation\CommerceAusPostServiceDefinition;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\AbstractServiceDefinition;
 
 /**

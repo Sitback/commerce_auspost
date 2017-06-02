@@ -5,7 +5,7 @@ namespace Drupal\commerce_auspost\PostageServices;
 use Exception;
 
 /**
- * Class ServiceNotFoundException
+ * Class ServiceNotFoundException.
  *
  * @package Drupal\commerce_auspost\PostageAssessment
  */
