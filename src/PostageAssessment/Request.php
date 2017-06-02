@@ -3,10 +3,12 @@
 namespace Drupal\commerce_auspost\PostageAssessment;
 
 use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
-use Drupal\commerce_auspost\PostageServices\ServiceDefinitions;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceTypes;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\WeightUnit;
+use InvalidArgumentException;
 
 /**
  * Defines a new PAC request.
@@ -46,9 +48,7 @@ class Request implements RequestInterface {
   /**
    * The shipping service definition.
    *
-   * @TODO: turn this into an object.
-   *
-   * @var array
+   * @var \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface
    */
   private $serviceDefinition;
 
@@ -73,7 +73,9 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function setPackageType($packageType) {
-    if (!$this->serviceSupport->validatePackageType($packageType)) {
+    try {
+      ServiceTypes::assertExists($packageType);
+    } catch (InvalidArgumentException $e) {
       throw new RequestException("Unknown package type '{$packageType}'.");
     }
 
@@ -148,8 +150,8 @@ class Request implements RequestInterface {
   /**
    * {@inheritdoc}
    */
-  public function setServiceDefinition(array $serviceDefinition) {
-    $this->serviceDefinition = $serviceDefinition;
+  public function setServiceDefinition(ServiceDefinitionInterface $definition) {
+    $this->serviceDefinition = $definition;
     return $this;
   }
 
@@ -180,7 +182,7 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function isParcel() {
-    return $this->packageType === ServiceDefinitions::SERVICE_TYPE_PARCEL;
+    return $this->packageType === ServiceTypes::PARCEL;
   }
 
   /**
@@ -213,30 +215,14 @@ class Request implements RequestInterface {
    * {@inheritdoc}
    */
   public function getServiceCode() {
-    return $this->getServiceDefinition()['service_code'];
+    return $this->getServiceDefinition()->getServiceCode();
   }
 
   /**
    * {@inheritdoc}
    */
   public function getExtraServiceOptions() {
-    $extraOpts = [];
-
-    // Optional properties that may be sent with the request, depending on the
-    // service in use.
-    $optKeys = [
-      'option_code',
-      'sub_opt_code',
-      'extra_cover',
-    ];
-
-    foreach ($optKeys as $opt) {
-      if (!empty($this->getServiceDefinition()[$opt])) {
-        $extraOpts[$opt] = $this->getServiceDefinition()[$opt];
-      }
-    }
-
-    return $extraOpts;
+    return $this->getServiceDefinition()->getAllOptions();
   }
 
   /**

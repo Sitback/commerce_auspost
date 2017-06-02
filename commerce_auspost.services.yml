@@ -5,6 +5,10 @@ services:
     tags:
       - { name: commerce_shipping.packer, priority: 0 }
 
+  commerce_auspost.postage_services.service_manager:
+    class: Drupal\commerce_auspost\PostageServices\ServiceDefinitionManager
+    parent: default_plugin_manager
+
   commerce_auspost.postage_services.service_support:
     class: Drupal\commerce_auspost\PostageServices\ServiceSupport
     arguments: []

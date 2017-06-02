@@ -17,6 +17,7 @@
   "require": {
     "php": ">=5.6",
     "ext-bcmath": "*",
+    "commerceguys/enum": "^1.0",
     "drupal/commerce": "~2",
     "drupal/commerce_shipping": "~2",
     "drupal/physical": "~1",

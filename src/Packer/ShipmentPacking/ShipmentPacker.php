@@ -43,13 +43,6 @@ class ShipmentPacker implements ShipmentPackerInterface {
   private $orderItems = [];
 
   /**
-   * Packed boxes.
-   *
-   * @var \DVDoug\BoxPacker\PackedBoxList
-   */
-  private $packedBoxes;
-
-  /**
    * {@inheritdoc}
    */
   public function __construct(Packer $packer, ServiceSupport $support) {

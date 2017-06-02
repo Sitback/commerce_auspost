@@ -3,6 +3,7 @@
 namespace Drupal\commerce_auspost\PostageAssessment;
 
 use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
 
 /**
  * Defines an interface to create a new PAC request.
@@ -96,17 +97,17 @@ interface RequestInterface {
   /**
    * Set service definition.
    *
-   * @param array $serviceDefinition
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface $definition
    *   Service definition.
    *
    * @return $this
    */
-  public function setServiceDefinition(array $serviceDefinition);
+  public function setServiceDefinition(ServiceDefinitionInterface $definition);
 
   /**
    * Get service definition.
    *
-   * @return array
+   * @return \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface
    *   Service definition.
    *
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException

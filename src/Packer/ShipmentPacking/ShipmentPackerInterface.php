@@ -2,9 +2,7 @@
 
 namespace Drupal\commerce_auspost\Packer\ShipmentPacking;
 
-use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\commerce_order\Entity\OrderItemInterface;
-use DVDoug\BoxPacker\Packer;
 
 /**
  * Defines an interface to wrap \DVDoug\BoxPacker\Packer.

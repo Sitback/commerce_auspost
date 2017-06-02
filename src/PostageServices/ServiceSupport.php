@@ -2,6 +2,8 @@
 
 namespace Drupal\commerce_auspost\PostageServices;
 
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionDefaults;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDestinations;
 use Drupal\physical\Length;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\Volume;
@@ -19,151 +21,8 @@ class ServiceSupport implements ServiceSupportInterface {
   /**
    * {@inheritdoc}
    */
-  public function hasService($key) {
-    return array_key_exists($key, ServiceDefinitions::services());
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getService($key) {
-    if ($this->hasService($key)) {
-      return ServiceDefinitions::services()[$key];
-    }
-    throw new ServiceNotFoundException("Requested service '{$key}' does not exist.");
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getServices($type = NULL, $dest = NULL) {
-    $services = ServiceDefinitions::services();
-
-    if ($type === NULL && $dest === NULL) {
-      return $services;
-    }
-
-    $filterByType = function ($type) {
-      return function ($service) use ($type) {
-        return $type === $service['type'];
-      };
-    };
-    $filterByDest = function ($dest) {
-      return function ($service) use ($dest) {
-        return $dest === $service['destination'];
-      };
-    };
-
-    // Filter by postage type if required.
-    switch ($type) {
-      case ServiceDefinitions::SERVICE_TYPE_PARCEL:
-        $services = array_filter(
-          $services,
-          $filterByType(ServiceDefinitions::SERVICE_TYPE_PARCEL)
-        );
-        break;
-
-      case ServiceDefinitions::SERVICE_TYPE_LETTER:
-        $services = array_filter(
-          $services,
-          $filterByType(ServiceDefinitions::SERVICE_TYPE_LETTER)
-        );
-        break;
-
-      case NULL:
-        break;
-
-      default:
-        throw new ServiceNotFoundException("Unknown service type '{$type}'.");
-    }
-
-    // Filter by destination if required.
-    switch ($dest) {
-      case ServiceDefinitions::SERVICE_DEST_DOMESTIC:
-        $services = array_filter(
-          $services,
-          $filterByDest(ServiceDefinitions::SERVICE_DEST_DOMESTIC)
-        );
-        break;
-
-      case ServiceDefinitions::SERVICE_DEST_INTERNATIONAL:
-        $services = array_filter(
-          $services,
-          $filterByDest(ServiceDefinitions::SERVICE_DEST_INTERNATIONAL)
-        );
-        break;
-
-      case NULL:
-        break;
-
-      default:
-        throw new ServiceNotFoundException(
-          "Unknown service destination '{$dest}'."
-        );
-    }
-
-    return $services;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getServicesByKeys(array $keys, $ignoreNonExisting = FALSE) {
-    $services = [];
-
-    foreach ($keys as $key) {
-      try {
-        $services[$key] = $this->getService($key);
-      } catch (ServiceNotFoundException $e) {
-        if ($ignoreNonExisting) {
-          continue;
-        }
-        throw $e;
-      }
-    }
-
-    return $services;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function supportedPackageTypes() {
-    return [
-      ServiceDefinitions::SERVICE_TYPE_PARCEL,
-      ServiceDefinitions::SERVICE_TYPE_LETTER,
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function supportedDestinations() {
-    return [
-      ServiceDefinitions::SERVICE_DEST_DOMESTIC,
-      ServiceDefinitions::SERVICE_DEST_INTERNATIONAL,
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateDestination($destination) {
-    return in_array($destination, $this->supportedDestinations(), true);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validatePackageType($type) {
-    return in_array($type, $this->supportedPackageTypes(), true);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getMaxParcelDimensions($destination) {
-    $dimensions = ServiceDefinitions::maxParcelDimensions();
+    $dimensions = ServiceDefinitionDefaults::maxParcelDimensions();
 
     if (array_key_exists($destination, $dimensions)) {
       return $dimensions[$destination];
@@ -180,7 +39,7 @@ class ServiceSupport implements ServiceSupportInterface {
   public function calculateParcelCubicWeight(Volume $volume) {
     // Calculate cubic weight as per AusPost guidelines.
     $cubicWeightNumber = bcmul(
-      ServiceDefinitions::CUBIC_WEIGHT_DENSITY,
+      ServiceDefinitionDefaults::CUBIC_WEIGHT_DENSITY,
       $volume->convert(VolumeUnit::CUBIC_METER)->getNumber()
     );
     return new Weight($cubicWeightNumber, WeightUnit::KILOGRAM);
@@ -212,7 +71,7 @@ class ServiceSupport implements ServiceSupportInterface {
     Length $height,
     $destination
   ) {
-    $isDomestic = $destination === ServiceDefinitions::SERVICE_DEST_DOMESTIC;
+    $isDomestic = $destination === ServiceDestinations::DOMESTIC;
     /** @var \Drupal\physical\Measurement[] $max */
     $max = $this->getMaxParcelDimensions($destination);
 

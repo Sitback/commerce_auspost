@@ -3,6 +3,7 @@
 namespace Drupal\commerce_auspost\Forms;
 
 use Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDestinations;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
@@ -105,7 +106,7 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       ),
       '#access' => count($allPackageTypes) > 1,
     ];
-    foreach ($this->serviceSupport->supportedDestinations() as $dest) {
+    foreach (ServiceDestinations::getAll() as $dest) {
       $packageTypes = $this->getPackageTypes($dest);
 
       // Select all package types by default.

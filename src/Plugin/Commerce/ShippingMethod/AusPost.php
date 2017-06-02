@@ -10,6 +10,9 @@ use Drupal\commerce_auspost\PostageAssessment\ClientInterface;
 use Drupal\commerce_auspost\PostageAssessment\RequestInterface;
 use Drupal\commerce_auspost\PostageAssessment\ResponseException;
 use Drupal\commerce_auspost\PostageAssessment\ResponseInterface;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitionManager;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
+use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDestinations;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\RounderInterface;
@@ -17,11 +20,13 @@ use Drupal\commerce_shipping\Entity\ShipmentInterface;
 use Drupal\commerce_shipping\PackageTypeManagerInterface;
 use Drupal\commerce_shipping\Plugin\Commerce\ShippingMethod\ShippingMethodBase;
 use Drupal\commerce_shipping\ShippingRate;
+use Drupal\commerce_shipping\ShippingService;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Utility\Error;
 use DVDoug\BoxPacker\ItemTooLargeException;
 use Exception;
 use Guzzle\Http\Exception\ClientErrorResponseException;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -29,19 +34,106 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides the Australia Post shipping method.
  *
- * @see \Drupal\commerce_auspost\PostageServices\ServiceDefinitions
- *   For further information on supported services.
- *
  * @CommerceShippingMethod(
  *   id = "auspost",
  *   label = @Translation("Australia Post"),
  *   services = {
- *     "AUS_SERVICE_OPTION_STANDARD" = @Translation("Australia Post - Standard Post"),
- *     "AUS_PARCEL_COURIER" = @Translation("Australia Post - Courier Post"),
- *     "AUS_PARCEL_EXPRESS" = @Translation("Australia Post - Express Post"),
- *     "INT_PARCEL_AIR_OWN_PACKAGING" = @Translation("Australia Post - International Economy Air"),
- *     "INT_PARCEL_AIR_OWN_PACK_SIG" = @Translation("Australia Post - International Economy Air (Signature required)"),
- *     "INT_PARCEL_AIR_OWN_PACK_INS" = @Translation("Australia Post - International Economy Air (Insured)"),
+ *     "commerce_auspost_service_definition:AUS_SERVICE_OPTION_STANDARD" =
+ *        @Translation("Australia Post Standard Post - 2-6 Days"),
+ *     "commerce_auspost_service_definition:AUS_SERVICE_OPTION_SIGNATURE" =
+ *        @Translation("Australia Post Standard Post, Signature required - 2-6 Days"),
+ *     "commerce_auspost_service_definition:AUS_SERVICE_OPTION_INS" =
+ *        @Translation("Australia Post Standard Post (Insured) - 2-6 Days"),
+ *     "commerce_auspost_service_definition:AUS_SERVICE_OPTION_SIG_INS" =
+ *        @Translation("Australia Post Standard Post (Insured), Signature required - 2-6 Days"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_EXPRESS" =
+ *        @Translation("Australia Post Express Post - 1-3 Days"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_EXPRESS_SIGNATURE" =
+ *        @Translation("Australia Post Express Post, Signature required - 1-3 Days"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_EXPRESS_INS" =
+ *        @Translation("Australia Post Express Post (Insured) - 1-3 Days"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_EXPRESS_SIG_INS" =
+ *        @Translation("Australia Post Express Post (Insured), Signature required - 1-3 Days"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_COURIER" =
+ *        @Translation("Australia Post Courier Post - Same Day Delivery"),
+ *     "commerce_auspost_service_definition:AUS_PARCEL_COUR_INS" =
+ *        @Translation("Australia Post Courier Post (Insured) - Same Day Delivery"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_SEA_OWN_PACKAGING" =
+ *        @Translation("Australia Post International Economy Sea - 30+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_SEA_OWN_PACK_SIG" =
+ *        @Translation("Australia Post International Economy Sea, Signature required - 30+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_SEA_OWN_PACK_INS" =
+ *        @Translation("Australia Post International Economy Sea (Insured) - 30+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_AIR_OWN_PACKAGING" =
+ *        @Translation("Australia Post International Economy Air - 10+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_AIR_OWN_PACK_SIG" =
+ *        @Translation("Australia Post International Economy Air, Signature required - 10+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_AIR_OWN_PACK_INS" =
+ *        @Translation("Australia Post International Economy Air (Insured) - 10+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_STD_OWN_PACKAGING" =
+ *        @Translation("Australia Post International Standard - 6+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_STD_OWN_PACK_SIG" =
+ *        @Translation("Australia Post International Standard, Signature required - 6+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_STD_OWN_PACK_INS" =
+ *        @Translation("Australia Post International Standard (Insured) - 6+ Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_EXP_OWN_PACKAGING" =
+ *        @Translation("Australia Post International Express - 2-4 Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_EXP_OWN_PACK_INS" =
+ *        @Translation("Australia Post International Express (Insured) - 2-4 Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_COR_OWN_PACKAGING" =
+ *        @Translation("Australia Post International Courier - 1-2 Days"),
+ *     "commerce_auspost_service_definition:INT_PARCEL_COR_OWN_PACK_INS" =
+ *        @Translation("Australia Post International Courier (Insured) - 1-2 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM" =
+ *        @Translation("Australia Post Standard Letter - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_PRIORITY" =
+ *        @Translation("Australia Post Standard Letter Priority - 1-4 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG" =
+ *        @Translation("Australia Post Standard Letter - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_PRIORITY" =
+ *        @Translation("Australia Post Standard Letter Priority - 1-4 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_REG_POST" =
+ *        @Translation("Australia Post Registered Post Letter - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_REG_CONF" =
+ *        @Translation("Australia Post Registered Post Letter - Confirmation - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_REG_P2P" =
+ *        @Translation("Australia Post Registered Post Letter - Person to Person - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_REG_POST" =
+ *        @Translation("Australia Post Registered Post Letter Large - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_REG_POST_CONF" =
+ *        @Translation("Australia Post Registered Post Letter Large - Confirmation - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_REG_P2P" =
+ *        @Translation("Australia Post Registered Post Letter - Person to Person - 2-6 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_EXP_POST" =
+ *        @Translation("Australia Post Express Post Envelope Small - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_SM_EXP_SIG" =
+ *        @Translation("Australia Post Express Post Envelope Small - Signature - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_MD_EXP" =
+ *        @Translation("Australia Post Express Post Envelope Medium - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_MD_EXP_SIG" =
+ *        @Translation("Australia Post Express Post Envelope Medium - Signature - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_EXPRESS_POST" =
+ *        @Translation("Australia Post Express Post Envelope Large - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_AUS_LETTER_LG_EXP_POST_SIG" =
+ *        @Translation("Australia Post Express Post Envelope Large - Signature - 1-3 Days"),
+ *     "commerce_auspost_service_definition:L_INTL_SERVICE_AIR_MAIL_LGT" =
+ *        @Translation("Australia Post Air Mail Light - 6+ Days"),
+ *     "commerce_auspost_service_definition:L_INTL_SERVICE_AIR_MAIL_MED" =
+ *        @Translation("Australia Post Air Mail Medium - 6+ Days"),
+ *     "commerce_auspost_service_definition:L_INTL_SERVICE_AIR_MAIL_HVY" =
+ *        @Translation("Australia Post Air Mail Heavy - 6+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LETTER_REG_SMALL" =
+ *        @Translation("Australia Post International Registered Prepaid DL Envelope - 6+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LETTER_REG_LARGE" =
+ *        @Translation("Australia Post International Registered Prepaid B4 Envelope - 6+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LET_EXP_OWN_PKG" =
+ *        @Translation("Australia Post International Express Letter - 2+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LET_EXP_OWN_PKG_INS" =
+ *        @Translation("Australia Post International Express Letter (Insured) - 2+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LET_COR_OWN_PKG" =
+ *        @Translation("Australia Post International Courier Letter - 2+ Days"),
+ *     "commerce_auspost_service_definition:L_INT_LET_COR_OWN_PKG_INS" =
+ *        @Translation("Australia Post International Courier Letter (Insured) - 2+ Days")
  *   }
  * )
  */
@@ -79,11 +171,11 @@ class AusPost extends ShippingMethodBase {
   private $configurationForm;
 
   /**
-   * Service support helpers
+   * The service definition manager.
    *
-   * @var \Drupal\commerce_auspost\PostageServices\ServiceSupport
+   * @var \Drupal\commerce_auspost\PostageServices\ServiceDefinitionManager
    */
-  private $serviceSupport;
+  private $serviceDefinitionManager;
 
   /**
    * AusPost client.
@@ -113,6 +205,8 @@ class AusPost extends ShippingMethodBase {
    *   The configuration form.
    * @param \Drupal\commerce_auspost\PostageServices\ServiceSupport $serviceSupport
    *   AusPost PAC supported services.
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceDefinitionManager $serviceManager
+   *   The service definition manager.
    * @param \Drupal\commerce_auspost\PostageAssessment\ClientInterface $client
    *   AusPost PAC client.
    */
@@ -126,12 +220,13 @@ class AusPost extends ShippingMethodBase {
     RounderInterface $rounder,
     ConfigureForm $configurationForm,
     ServiceSupport $serviceSupport,
+    ServiceDefinitionManager $serviceManager,
     ClientInterface $client
   ) {
     $this->container = $container;
     $this->watchdog = $watchdog;
     $this->rounder = $rounder;
-    $this->serviceSupport = $serviceSupport;
+    $this->serviceDefinitionManager = $serviceManager;
     $this->client = $client;
 
     $configurationForm->setShippingInstance($this)
@@ -169,6 +264,7 @@ class AusPost extends ShippingMethodBase {
       $container->get('commerce_price.rounder'),
       new ConfigureForm(),
       $container->get('commerce_auspost.postage_services.service_support'),
+      $container->get('commerce_auspost.postage_services.service_manager'),
       $container->get('commerce_auspost.postage_assessment.client')
     );
   }
@@ -226,15 +322,14 @@ class AusPost extends ShippingMethodBase {
    * {@inheritdoc}
    *
    * @throws \InvalidArgumentException
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   * @throws \Drupal\commerce_auspost\ConfigurationException
    * @throws \Drupal\commerce_auspost\PostageAssessment\ClientException
-   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
-   * @throws \Drupal\commerce_auspost\PostageServices\ServiceNotFoundException
-   * @throws \Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   * @throws \Drupal\commerce_auspost\ConfigurationException
    * @throws \Drupal\commerce_auspost\PostageServices\ServiceSupportException
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
+   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
   public function calculateRates(ShipmentInterface $shipment) {
     if (!$this->configurationForm->isConfigured()) {
@@ -252,16 +347,23 @@ class AusPost extends ShippingMethodBase {
       $this->configuration['api_information']['api_key']
     );
 
-    // @TODO: Allow altering of rate labels.
-    $serviceDefinitions = $this->serviceSupport->getServicesByKeys(
-      array_keys($this->services)
-    );
-
     // Calculate postage for all services.
     $rates = [];
-    foreach ($serviceDefinitions as $definitionKey => $definition) {
+    $serviceDefinitions = $this->serviceDefinitionManager->getDefinitions();
+    foreach ($serviceDefinitions as $serviceId => $serviceConfig) {
+      // Skip services that aren't enabled.
+      if (!in_array($serviceId, $this->configuration['services'], TRUE)) {
+        continue;
+      }
+
+      /** @var \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface $serviceDefinition */
+      $serviceDefinition = $this->serviceDefinitionManager->createInstance(
+        $serviceId,
+        $serviceConfig
+      );
+
       $packageTypes = $this->getEnabledPackageTypes(
-        $definition['destination']
+        $serviceDefinition->getDestination()
       );
       $postagePrice = new Price(0, static::AUD_CURRENCY_CODE);
 
@@ -269,7 +371,7 @@ class AusPost extends ShippingMethodBase {
         $packedBoxes = $this->getPackedBoxes(
           $packageTypes,
           $shipment->getOrder()->getItems(),
-          $definition
+          $serviceDefinition
         );
       } catch (ItemTooLargeException $e) {
         $this->logException($e, 'No package type large enough could be found.');
@@ -282,8 +384,8 @@ class AusPost extends ShippingMethodBase {
             ->setAddress($address)
             ->setShipment($shipment)
             ->setPackedBox($packedBox)
-            ->setPackageType($definition['type'])
-            ->setServiceDefinition($definition);
+            ->setPackageType($serviceDefinition->getServiceType())
+            ->setServiceDefinition($serviceDefinition);
           // Log request if enabled.
           $this->logApi('Sending AusPost PAC API request', $request);
 
@@ -311,9 +413,16 @@ class AusPost extends ShippingMethodBase {
         );
       }
 
+      // Use the title off the service definition instead (it allows it to be
+      // altered).
+      $service = new ShippingService(
+        $serviceDefinition->getServiceId(),
+        $serviceDefinition->getLabel()
+      );
+
       $rates[] = new ShippingRate(
-        $definitionKey,
-        $this->services[$definitionKey],
+        $serviceId,
+        $service,
         $postagePrice
       );
     }
@@ -338,7 +447,7 @@ class AusPost extends ShippingMethodBase {
       ],
     ];
 
-    foreach ($this->serviceSupport->supportedDestinations() as $dest) {
+    foreach (ServiceDestinations::getAll() as $dest) {
       $defaults['enabled_package_types'][$dest] = [];
     }
 
@@ -385,7 +494,9 @@ class AusPost extends ShippingMethodBase {
       return $types;
     }
 
-    if (!$this->serviceSupport->validateDestination($dest)) {
+    try {
+      ServiceDestinations::assertExists($dest);
+    } catch (InvalidArgumentException $e) {
       throw new ConfigurationException("Unknown package destination '{$dest}'.");
     }
 
@@ -439,7 +550,7 @@ class AusPost extends ShippingMethodBase {
    *   A list package type to use for packing.
    * @param \Drupal\commerce_order\Entity\OrderItemInterface[] $orderItems
    *   A list of purchased order items.
-   * @param array $service
+   * @param \Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface $service
    *   Shipping service definition.
    *
    * @return \Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox[]
@@ -452,14 +563,14 @@ class AusPost extends ShippingMethodBase {
   private function getPackedBoxes(
     array $packageTypes,
     array $orderItems,
-    array $service
+    ServiceDefinitionInterface $service
   ) {
     $packer = $this->container->get('commerce_auspost.shipment_packer');
 
     // Get rates for each packed box.
     foreach ($packageTypes as $packageType) {
       try {
-        $packer->addPackageType($packageType, $service['destination']);
+        $packer->addPackageType($packageType, $service->getDestination());
       } catch (ShipmentPackerException $e) {
         $this->logException($e, 'Invalid package type skipped.');
         // Ignore invalid packages.
@@ -467,7 +578,13 @@ class AusPost extends ShippingMethodBase {
       }
     }
 
-    $packer->addOrderItems($orderItems);
+    // Add order items multiple times depending on quantity.
+    foreach ($orderItems as $orderItem) {
+      $quantity = (int) $orderItem->getQuantity();
+      for ($i = 0; $i < $quantity; $i++) {
+        $packer->addOrderItem($orderItem);
+      }
+    }
 
     return $packer->pack();
   }

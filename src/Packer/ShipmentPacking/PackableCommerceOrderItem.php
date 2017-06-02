@@ -159,7 +159,7 @@ class PackableCommerceOrderItem implements Item {
       );
 
       if ($convertTo !== NULL) {
-        $measurement->convert($convertTo);
+        $measurement = $measurement->convert($convertTo);
       }
 
       $measurementNumber = $measurement->getNumber();
