@@ -161,9 +161,9 @@ class PackableCommercePackageType implements Box {
    */
   public function getInnerVolume() {
     // Use bcmath to calculate volume.
-    $width = $this->getConvertedDimension('width', FALSE);
-    $length = $this->getConvertedDimension('length', FALSE);
-    $height = $this->getConvertedDimension('height', FALSE);
+    $width = $this->getInnerWidth();
+    $length = $this->getInnerLength();
+    $height = $this->getInnerDepth();
 
     $volume = bcmul($width, bcmul($length, $height));
     return (int) ceil((float) $volume);
