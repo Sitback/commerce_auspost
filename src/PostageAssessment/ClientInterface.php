@@ -10,14 +10,6 @@ namespace Drupal\commerce_auspost\PostageAssessment;
 interface ClientInterface {
 
   /**
-   * Client constructor.
-   *
-   * @param NULL $apiKey
-   *   AusPost PAC API key.
-   */
-  public function __construct($apiKey = NULL);
-
-  /**
    * Set AusPost PAC API key.
    *
    * @param string $key

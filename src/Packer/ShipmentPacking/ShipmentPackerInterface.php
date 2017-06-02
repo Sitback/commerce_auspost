@@ -14,16 +14,6 @@ use DVDoug\BoxPacker\Packer;
 interface ShipmentPackerInterface {
 
   /**
-   * ShipmentPacker constructor.
-   *
-   * @param \DVDoug\BoxPacker\Packer $packer
-   *   The packer.
-   * @param \Drupal\commerce_auspost\PostageServices\ServiceSupport $support
-   *   Service support helpers.
-   */
-  public function __construct(Packer $packer, ServiceSupport $support);
-
-  /**
    * Adds a package type to the packing list.
    *
    * @param array $packageType
