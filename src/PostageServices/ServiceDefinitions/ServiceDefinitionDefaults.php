@@ -326,7 +326,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 5,
+          'height' => 5,
           'weight' => 250,
         ],
       ],
@@ -341,7 +341,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 5,
+          'height' => 5,
           'weight' => 250,
         ],
       ],
@@ -356,7 +356,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -371,7 +371,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -386,7 +386,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -401,7 +401,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -416,7 +416,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -436,7 +436,7 @@ final class ServiceDefinitionDefaults {
       //   'max_dimensions' => [
       //     'length' => 240,
       //     'width' => 130,
-      //     'thickness' => 20,
+      //     'height' => 20,
       //     'weight' => 500,
       //   ],
       // ],
@@ -452,7 +452,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -467,7 +467,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -482,7 +482,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -502,7 +502,7 @@ final class ServiceDefinitionDefaults {
       //   'max_dimensions' => [
       //     'length' => 360,
       //     'width' => 260,
-      //     'thickness' => 20,
+      //     'height' => 20,
       //     'weight' => 500,
       //   ],
       // ],
@@ -518,7 +518,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 220,
           'width' => 110,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -533,7 +533,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 220,
           'width' => 110,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -548,7 +548,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 229,
           'width' => 162,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -563,7 +563,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 229,
           'width' => 162,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -578,7 +578,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 353,
           'width' => 250,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -593,7 +593,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 353,
           'width' => 250,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -609,7 +609,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 50,
         ],
       ],
@@ -624,7 +624,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 250,
         ],
       ],
@@ -639,7 +639,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -654,7 +654,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 240,
           'width' => 130,
-          'thickness' => 5,
+          'height' => 5,
           'weight' => 500,
         ],
       ],
@@ -669,7 +669,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 265,
           'width' => 250,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -684,7 +684,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -699,7 +699,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -714,7 +714,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],
@@ -729,7 +729,7 @@ final class ServiceDefinitionDefaults {
         'max_dimensions' => [
           'length' => 360,
           'width' => 260,
-          'thickness' => 20,
+          'height' => 20,
           'weight' => 500,
         ],
       ],

@@ -86,4 +86,12 @@ class CommerceAusPostServiceDefinition extends Plugin {
    */
   public $extraCover = 0;
 
+  /**
+   * (Optional) max dimensions for this service in millimetres and grams.
+   *
+   * @var array
+   *   An array with the keys: length, width, height and weight.
+   */
+  public $maxDimensions;
+
 }

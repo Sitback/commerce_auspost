@@ -32,7 +32,25 @@ class ServiceDefinitionDeriver extends DeriverBase {
         'option_code' => $service['option_code'],
         'sub_option_code' => $service['sub_option_code'],
         'extra_cover' => $service['extra_cover'],
-      ] + $basePluginDefinition;
+      ];
+
+      if (array_key_exists('max_dimensions', $service)) {
+        $validDimension = true;
+        $dimensionKeys = ['length', 'width', 'height', 'weight'];
+        foreach ($dimensionKeys as $dimensionKey) {
+          if (!array_key_exists($dimensionKey, $service['max_dimensions'])) {
+            $validDimension = false;
+            break;
+          }
+        }
+
+        if ($validDimension) {
+          $this->derivatives[$serviceKey]['max_dimensions'] = $service['max_dimensions'];
+        }
+      }
+
+      // Add defaults.
+      $this->derivatives[$serviceKey] +=  $basePluginDefinition;
     }
 
     return $this->derivatives;

@@ -23,6 +23,10 @@ use Drupal\commerce_shipping\ShippingRate;
 use Drupal\commerce_shipping\ShippingService;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Utility\Error;
+use Drupal\physical\Length;
+use Drupal\physical\LengthUnit;
+use Drupal\physical\Weight;
+use Drupal\physical\WeightUnit;
 use DVDoug\BoxPacker\ItemTooLargeException;
 use Exception;
 use Guzzle\Http\Exception\ClientErrorResponseException;
@@ -319,6 +323,18 @@ class AusPost extends ShippingMethodBase {
       $message = $defaultMessage;
     }
 
+    $this->logError($message, $variables);
+  }
+
+  /**
+   * Log an error to watchdog.
+   *
+   * @param string $message
+   *   Message to log.
+   * @param array $variables
+   *   Message variables.
+   */
+  private function logError($message, array $variables = []) {
     $this->watchdog->error($message, $variables);
   }
 
@@ -367,8 +383,19 @@ class AusPost extends ShippingMethodBase {
       );
 
       $packageTypes = $this->getEnabledPackageTypes(
-        $serviceDefinition->getDestination()
+        $serviceDefinition->getDestination(),
+        $serviceDefinition->getMaxDimensions()
       );
+      if (count($packageTypes) === 0) {
+        $this->logError(
+          'No valid package types could be found for service %service.',
+          [
+            '%service' => $serviceId,
+          ]
+        );
+        continue;
+      }
+
       $postagePrice = new Price(0, static::AUD_CURRENCY_CODE);
 
       try {
@@ -535,16 +562,25 @@ class AusPost extends ShippingMethodBase {
   /**
    * Get all enabled package types for this shipping method.
    *
+   * This also optionally filters packages to only show those that fit the
+   * service's max dimensions.
+   *
    * @param string $dest
    *   An (optional) package destination (one of 'domestic' or 'international)
    *   to filter by. If not specified, all enabled package types are returned.
+   * @param \Drupal\physical\Measurement[] $maxDimensions
+   *   An (optional) array of maximum dimensions supported by the shipping
+   *   service. Required keys: width, height, length, weight.
    *
    * @return array
    *   A list of enabled package type definitions.
    *
    * @throws \Drupal\commerce_auspost\ConfigurationException
    */
-  public function getEnabledPackageTypes($dest = NULL) {
+  private function getEnabledPackageTypes(
+    $dest = NULL,
+    array $maxDimensions = []
+  ) {
     // Assume all types are fair game unless told otherwise.
     $types = $this->getPossiblePackageTypes($dest);
 
@@ -553,6 +589,33 @@ class AusPost extends ShippingMethodBase {
         $types,
         array_filter($this->configuration['enabled_package_types'][$dest])
       );
+    }
+
+    if (!empty($maxDimensions)) {
+      $lengthProps = ['width', 'height', 'length'];
+      $types = array_filter($types, function ($type) use ($maxDimensions, $lengthProps) {
+        // Weight is a special case, compare separately.
+        $packageWeight = (new Weight(
+          $type['weight']['number'],
+          $type['weight']['unit']
+        ))->convert(WeightUnit::GRAM);
+        if ($packageWeight->greaterThan($maxDimensions['weight'])) {
+          return FALSE;
+        }
+
+        foreach ($lengthProps as $prop) {
+          // All max dimension lengths are in millimetres.
+          $length = (new Length(
+            $type['dimensions'][$prop],
+            $type['dimensions']['unit']
+          ))->convert(LengthUnit::MILLIMETER);
+          if ($length->greaterThan($maxDimensions[$prop])) {
+            return FALSE;
+          }
+        }
+
+        return TRUE;
+      });
     }
 
     return $types;

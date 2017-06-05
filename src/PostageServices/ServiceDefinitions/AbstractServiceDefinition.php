@@ -3,6 +3,10 @@
 namespace Drupal\commerce_auspost\PostageServices\ServiceDefinitions;
 
 use Drupal\Core\Plugin\PluginBase;
+use Drupal\physical\Length;
+use Drupal\physical\LengthUnit;
+use Drupal\physical\Weight;
+use Drupal\physical\WeightUnit;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -70,6 +74,13 @@ abstract class AbstractServiceDefinition extends PluginBase implements
   protected $extraCover = 0;
 
   /**
+   * Max dimensions for this service (if any).
+   *
+   * @var array
+   */
+  protected $maxDimensions = [];
+
+  /**
    * AbstractServiceDefinition constructor.
    *
    * @param array $configuration
@@ -99,6 +110,7 @@ abstract class AbstractServiceDefinition extends PluginBase implements
       'option_code' => 'setOptionCode',
       'sub_option_code' => 'setSubOptionCode',
       'extra_cover' => 'setExtraCover',
+      'max_dimensions' => 'setMaxDimensions',
     ];
     foreach ($optionalVars as $var => $method) {
       if (!empty($configuration[$var])) {
@@ -244,6 +256,53 @@ abstract class AbstractServiceDefinition extends PluginBase implements
    */
   public function setExtraCover($extraCover) {
     $this->extraCover = $extraCover;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getMaxDimensions() {
+    // static $dimensions;
+    // if ($dimensions !== NULL) {
+    //   return $dimensions;
+    // }
+
+    // Reformat dimensions into an array of measurements.
+    $dimensions = $this->maxDimensions;
+    if (!empty($dimensions)) {
+      // Weight is a special case.
+      $dimensions['weight'] = new Weight(
+        $dimensions['weight'],
+        WeightUnit::GRAM
+      );
+
+      $lengthProps = ['height', 'width', 'length'];
+      foreach ($lengthProps as $prop) {
+        $dimensions[$prop] = new Length(
+          $dimensions[$prop],
+          LengthUnit::MILLIMETER
+        );
+      }
+    }
+
+    return $dimensions;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setMaxDimensions(array $dimensions) {
+    $requiredKeys = ['height', 'width', 'length', 'weight'];
+    foreach ($requiredKeys as $key) {
+      if (!array_key_exists($key, $dimensions)) {
+        throw new \InvalidArgumentException(
+          "Required dimension key '{$key}' not provided."
+        );
+      }
+    }
+
+    $this->maxDimensions = $dimensions;
     return $this;
   }
 

@@ -176,6 +176,28 @@ interface ServiceDefinitionInterface extends
   public function setExtraCover($cover);
 
   /**
+   * Get maximum dimensions for this service.
+   *
+   * @return \Drupal\physical\Measurement[]
+   *   Max dimensions, an array with keys: height, width, length and weight.
+   */
+  public function getMaxDimensions();
+
+  /**
+   * Set maximum dimensions for this service.
+   *
+   * @param array $dimensions
+   *   Max dimensions, should be an array with: height, width, length and
+   *   weight keys.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   If dimension array is invalid.
+   */
+  public function setMaxDimensions(array $dimensions);
+
+  /**
    * Get all options (i.e. option_code & sub_option_code) if set.
    *
    * @return string[]
