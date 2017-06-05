@@ -4,9 +4,11 @@ namespace Drupal\commerce_auspost\PostageAssessment;
 
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\Packer\ShipmentPacking\PackedBox;
+use Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod\AusPost;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceDefinitionInterface;
 use Drupal\commerce_auspost\PostageServices\ServiceDefinitions\ServiceTypes;
 use Drupal\commerce_auspost\PostageServices\ServiceSupport;
+use Drupal\commerce_price\Price;
 use Drupal\commerce_shipping\Entity\ShipmentInterface;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\WeightUnit;
@@ -60,6 +62,27 @@ class Request implements RequestInterface {
    * @var \Drupal\commerce_auspost\PostageServices\ServiceSupport
    */
   private $serviceSupport;
+
+  /**
+   * Insurance status.
+   *
+   * @var bool
+   */
+  private $insuranceEnabled;
+
+  /**
+   * Insurance as a percentage of order total, represented as a decimal.
+   *
+   * @var float
+   */
+  private $insurancePercentage;
+
+  /**
+   * Whether AusPost max extra cover limits should be checked.
+   *
+   * @var bool
+   */
+  private $insuranceLimit;
 
   /**
    * Request constructor.
@@ -248,6 +271,75 @@ class Request implements RequestInterface {
       ->getNumber();
 
     return (int) ceil((float) $number);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setInsuranceOptions($enabled, $percentage, $limit = TRUE) {
+    $this->insuranceEnabled = (bool) $enabled;
+    $this->insurancePercentage = (float) $percentage;
+    $this->insuranceLimit = $limit;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getInsuranceOptions() {
+    $requiredProps = [
+      'insuranceEnabled',
+      'insurancePercentage',
+      'insuranceLimit',
+    ];
+
+    foreach ($requiredProps as $prop) {
+      if ($this->{$prop} === NULL) {
+        throw new RequestException("Required property '{$prop}' is not set.");
+      }
+    }
+
+    return [
+      'enabled' => $this->insuranceEnabled,
+      'percentage' => $this->insurancePercentage,
+      'limit' => $this->insuranceLimit,
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getInsuranceAmount() {
+    $maxExtraCover = $this->getServiceDefinition()->getExtraCover();
+    // Disable insurance if service doesn't support extra cover.
+    if ($maxExtraCover === NULL || $maxExtraCover === 0) {
+      return 0;
+    }
+
+    $insuranceOpts = $this->getInsuranceOptions();
+    if (!$insuranceOpts['enabled']) {
+      return 0;
+    }
+
+    // We only deal in AUD.
+    $orderAmount = $this->getShipment()
+      ->getOrder()
+      ->getTotalPrice()
+      ->convert(AusPost::AUD_CURRENCY_CODE);
+
+    $insuranceAmount = $orderAmount->multiply(
+      (string) $insuranceOpts['percentage']
+    );
+
+    if ($insuranceOpts['limit']) {
+      // Check if amount breaches limit and return limit if so.
+      $max = new Price($maxExtraCover, AusPost::AUD_CURRENCY_CODE);
+      if ($insuranceAmount->greaterThan($max)) {
+        $insuranceAmount = $max;
+      }
+    }
+
+    return (int) ceil((float) $insuranceAmount->getNumber());
   }
 
 }

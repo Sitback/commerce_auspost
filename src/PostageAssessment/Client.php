@@ -99,6 +99,12 @@ class Client implements ClientInterface {
 
     $opts += $extraOpts;
 
+    // Add extra cover if enabled.
+    $extraCover = $request->getInsuranceAmount();
+    if ($extraCover > 0) {
+      $opts['extra_cover'] = $extraCover;
+    }
+
     // Figure out method call.
     $method = 'calculate';
     if ($request->isDomestic()) {

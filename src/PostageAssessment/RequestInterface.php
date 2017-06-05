@@ -117,6 +117,31 @@ interface RequestInterface {
   public function getServiceDefinition();
 
   /**
+   * Set service definition.
+   *
+   * @param bool $enabled
+   *   TRUE if insurance is enabled, FALSE otherwise.
+   * @param float $percentage
+   *   Insurance percentage of order total, as a decimal.
+   * @param bool $limit
+   *   If TRUE and the insurance amount is greater than the AusPost maximum, the
+   *   maximum will be used. If FALSE, no checks will be made.
+   *
+   * @return $this
+   */
+  public function setInsuranceOptions($enabled, $percentage, $limit = TRUE);
+
+  /**
+   * Get insurance options.
+   *
+   * @return array
+   *   An array with the keys: enabled, percentage and limit.
+   *
+   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   */
+  public function getInsuranceOptions();
+
+  /**
    * Checks if this request is a domestic PAC request.
    *
    * @return bool
@@ -167,5 +192,15 @@ interface RequestInterface {
    * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
    */
   public function getExtraServiceOptions();
+
+  /**
+   * Get calculated insurance amount.
+   *
+   * @return integer
+   *   Insurance amount rounded up to the closest integer.
+   *
+   * @throws \Drupal\commerce_auspost\PostageAssessment\RequestException
+   */
+  public function getInsuranceAmount();
 
 }

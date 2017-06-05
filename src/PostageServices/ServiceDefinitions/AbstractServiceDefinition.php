@@ -254,8 +254,6 @@ abstract class AbstractServiceDefinition extends PluginBase implements
     $options = [
       'option_code' => $this->getOptionCode(),
       'sub_opt_code' => $this->getSubOptionCode(),
-      // @TODO: this is the _max_ extra cover.
-      // 'extra_cover' => $this->getExtraCover(),
     ];
 
     // Remove empty values.

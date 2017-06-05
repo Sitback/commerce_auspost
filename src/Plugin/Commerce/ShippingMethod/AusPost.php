@@ -390,6 +390,11 @@ class AusPost extends ShippingMethodBase {
             ->setShipment($shipment)
             ->setPackedBox($packedBox)
             ->setPackageType($serviceDefinition->getServiceType())
+            ->setInsuranceOptions(
+              $this->configuration['options']['insurance'],
+              $this->configuration['options']['insurance_percentage'],
+              $this->configuration['options']['insurance_limit']
+            )
             ->setServiceDefinition($serviceDefinition);
           // Log request if enabled.
           $this->logApi('Sending AusPost PAC API request', $request);

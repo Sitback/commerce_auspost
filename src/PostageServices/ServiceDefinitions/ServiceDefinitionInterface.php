@@ -176,7 +176,7 @@ interface ServiceDefinitionInterface extends
   public function setExtraCover($cover);
 
   /**
-   * Get all options (i.e. option_code, sub_option_code & extra_cover) if set.
+   * Get all options (i.e. option_code & sub_option_code) if set.
    *
    * @return string[]
    *   A list of all options where data exists with keys in snake_case.
