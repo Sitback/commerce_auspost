@@ -88,6 +88,8 @@ Until this is officially merged into the existing `commerce_auspost` module, you
 
 Do note, the more shipping services you have enabled, the slower postage calculations will be.
 
+**There is currently no upgrade path between the Drupal 7 and Drupal 8 versions of this module.**
+
 ## Configuration
 * API settings and desired shipping services can be configured on the shipping methods page (`Commerce > Configuration > Shipping Methods`)
 * Custom package types can be added on the package types (`Commerce > Configuration > Package Types`)
