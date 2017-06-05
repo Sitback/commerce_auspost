@@ -1,5 +1,5 @@
 {
-  "name": "drupal/commerce_auspost",
+  "name": "sitback/commerce_auspost",
   "description": "Integrates Australia Post postage estimation with Commerce Shipping.",
   "type": "drupal-module",
   "license": "GPL-2.0+",
@@ -26,5 +26,10 @@
   },
   "require-dev": {
     "drupal/coder": "^8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Drupal\\commerce_auspost\\": "src"
+    }
   }
 }
