@@ -448,6 +448,8 @@ class AusPost extends ShippingMethodBase {
       ],
       'options' => [
         'insurance' => FALSE,
+        'insurance_percentage' => 0,
+        'insurance_limit' => TRUE,
         'rate_multiplier' => 1.0,
         'round' => PHP_ROUND_HALF_UP,
         'log' => [],

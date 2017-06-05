@@ -151,6 +151,44 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
       '#title' => $this->t('Include insurance'),
       '#description' => $this->t('Include insurance value of shippable line items in AusPost rate requests'),
       '#default_value' => $configuration['options']['insurance'],
+      '#attributes' => [
+        'data-states-name' => 'insurance',
+      ],
+    ];
+    $form['options']['insurance_settings'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Insurance settings'),
+      '#description' => $this->t('Insurance calculation settings'),
+      '#open' => TRUE,
+      '#states' => [
+        'visible' => [
+          'input[data-states-name="insurance"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+    ];
+    $form['options']['insurance_settings']['insurance_percentage'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Percentage of order value'),
+      '#description' => $this->t('Percentage of order to add on as insurance. For example, enter 1.5 to add 150% extra insurance cover.'),
+      '#min' => 0.1,
+      '#step' => 0.1,
+      '#size' => 5,
+      '#default_value' => $configuration['options']['insurance_percentage'],
+      '#states' => [
+        'required' => [
+          'input[data-states-name="insurance"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+    ];
+    $form['options']['insurance_settings']['insurance_limit'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t("Limit insurance value to Australia Post's insurance limit"),
+      '#description' => $this->t('<strong>** WARNING - Enabling this will limit the insurance to $300 for domestic standard services and $5000 for domestic confirmed services and international services.</strong><br>Disabling this will cause Australia Post to reject services where the insurance value is greater than these limit.'),
+      '#default_value' => $configuration['options']['insurance_limit'],
     ];
     $form['options']['rate_multiplier'] = [
       '#type' => 'number',
@@ -193,10 +231,13 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
     if (!$form_state->getErrors()) {
       $configuration = $this->getShippingInstance()->getConfiguration();
       $values = $this->value($form_state->getValue($form['#parents']));
+      $insuranceOpts = $values['options']['insurance_settings'];
 
       $configuration['enabled_package_types'] = $values['enabled_package_types'];
       $configuration['api_information']['api_key'] = $values['api_information']['api_key'];
       $configuration['options']['insurance'] = $values['options']['insurance'];
+      $configuration['options']['insurance_percentage'] = $insuranceOpts['insurance_percentage'];
+      $configuration['options']['insurance_limit'] = $insuranceOpts['insurance_limit'];
       $configuration['options']['rate_multiplier'] = $values['options']['rate_multiplier'];
       $configuration['options']['round'] = $values['options']['round'];
       $configuration['options']['log'] = $values['options']['log'];
