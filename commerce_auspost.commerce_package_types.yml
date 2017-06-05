@@ -1,7 +1,3 @@
-#commerce_auspost_domestic_parcel:
-#  class: \Drupal\commerce_auspost\Plugin\Commerce\PackageType\DomesticParcel
-#  deriver: \Drupal\commerce_auspost\Plugin\Deriver\DomesticParcelDeriver
-
 # These are defined manually as we don't have access to the PAC API in the
 # context of a plugin deriver.
 commerce_auspost:domestic_parcel:boxed_bc:
