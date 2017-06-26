@@ -4,6 +4,8 @@ namespace Drupal\commerce_auspost\Plugin\Commerce\ShippingMethod;
 
 use Drupal\commerce_auspost\Address;
 use Drupal\commerce_auspost\ConfigurationException;
+use Drupal\commerce_auspost\Event\BeforePackEvent;
+use Drupal\commerce_auspost\Event\CommerceAuspostEvents;
 use Drupal\commerce_auspost\Forms\ConfigureForm;
 use Drupal\commerce_auspost\Packer\ShipmentPacking\ShipmentPackerException;
 use Drupal\commerce_auspost\PostageAssessment\ClientInterface;
@@ -34,6 +36,7 @@ use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Provides the Australia Post shipping method.
@@ -191,6 +194,13 @@ class AusPost extends ShippingMethodBase {
   private $client;
 
   /**
+   * The event dispatcher.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  private $eventDispatcher;
+
+  /**
    * AusPost constructor.
    *
    * @param array $configuration
@@ -227,13 +237,15 @@ class AusPost extends ShippingMethodBase {
     ConfigureForm $configurationForm,
     ServiceSupport $serviceSupport,
     ServiceDefinitionManager $serviceManager,
-    ClientInterface $client
+    ClientInterface $client,
+    EventDispatcherInterface $eventDispatcher
   ) {
     $this->container = $container;
     $this->watchdog = $watchdog;
     $this->rounder = $rounder;
     $this->serviceDefinitionManager = $serviceManager;
     $this->client = $client;
+    $this->eventDispatcher = $eventDispatcher;
 
     $configurationForm->setShippingInstance($this)
       ->setServiceSupport($serviceSupport);
@@ -271,7 +283,8 @@ class AusPost extends ShippingMethodBase {
       new ConfigureForm(),
       $container->get('commerce_auspost.postage_services.service_support'),
       $container->get('commerce_auspost.postage_services.service_manager'),
-      $container->get('commerce_auspost.postage_assessment.client')
+      $container->get('commerce_auspost.postage_assessment.client'),
+      $container->get('event_dispatcher')
     );
   }
 
@@ -399,9 +412,18 @@ class AusPost extends ShippingMethodBase {
       $postagePrice = new Price(0, static::AUD_CURRENCY_CODE);
 
       try {
+        $event = $this->eventDispatcher->dispatch(
+          CommerceAuspostEvents::BEFORE_PACK,
+          new BeforePackEvent($shipment->getOrder()->getItems())
+        );
+
+        if (count($event->getOrderItems()) === 0) {
+          return [];
+        }
+
         $packedBoxes = $this->getPackedBoxes(
           $packageTypes,
-          $shipment->getOrder()->getItems(),
+          $event->getOrderItems(),
           $serviceDefinition
         );
       }
