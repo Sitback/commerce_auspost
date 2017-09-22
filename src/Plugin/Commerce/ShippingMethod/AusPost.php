@@ -225,6 +225,8 @@ class AusPost extends ShippingMethodBase {
    *   The service definition manager.
    * @param \Drupal\commerce_auspost\PostageAssessment\ClientInterface $client
    *   AusPost PAC client.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $eventDispatcher
+   *   The event dispatcher.
    */
   public function __construct(
     array $configuration,
@@ -414,18 +416,20 @@ class AusPost extends ShippingMethodBase {
       try {
         $event = $this->eventDispatcher->dispatch(
           CommerceAuspostEvents::BEFORE_PACK,
-          new BeforePackEvent($shipment->getOrder()->getItems())
+          new BeforePackEvent($shipment, $postagePrice)
         );
 
-        if (count($event->getOrderItems()) === 0) {
-          return [];
+        // Update postage price.
+        $postagePrice = $event->getPostage();
+
+        // Pack remaining order items.
+        if (count($event->getOrderItems()) > 0) {
+          $packedBoxes = $this->getPackedBoxes(
+            $packageTypes,
+            $event->getOrderItems(),
+            $serviceDefinition
+          );
         }
-
-        $packedBoxes = $this->getPackedBoxes(
-          $packageTypes,
-          $event->getOrderItems(),
-          $serviceDefinition
-        );
       }
       catch (ItemTooLargeException $e) {
         $this->logException($e, 'No package type large enough could be found.');

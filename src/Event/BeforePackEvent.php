@@ -3,6 +3,9 @@
 namespace Drupal\commerce_auspost\Event;
 
 use Drupal\commerce_order\Entity\OrderItemInterface;
+use Drupal\commerce_price\Price;
+use Drupal\commerce_shipping\Entity\ShipmentInterface;
+use Drupal\commerce_shipping\ShippingRate;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
@@ -20,13 +23,43 @@ class BeforePackEvent extends Event {
   protected $orderItems;
 
   /**
+   * The shipping postage for this shipment.
+   *
+   * @var Price
+   */
+  protected $postage;
+
+  /**
    * Constructs a new BeforePackEvent.
    *
-   * @param \Drupal\commerce_order\Entity\OrderItemInterface[] $orderItems
-   *   The items to be packed.
+   * @param \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment
+   *   The shipment.
+   * @param Price $postage
+   *   Postage prior to packing.
    */
-  public function __construct($orderItems) {
-    $this->orderItems = $orderItems;
+  public function __construct(ShipmentInterface $shipment, Price $postage) {
+    $this->orderItems = $shipment->getOrder()->getItems();
+    $this->postage = $postage;
+  }
+
+  /**
+   * Get postage.
+   *
+   * @return Price
+   *    The shipping postage.
+   */
+  public function getPostage() {
+    return $this->postage;
+  }
+
+  /**
+   * Set postage.
+   *
+   * @param Price $postage
+   *    The shipping postage.
+   */
+  public function setPostage($postage) {
+    $this->postage = $postage;
   }
 
   /**
