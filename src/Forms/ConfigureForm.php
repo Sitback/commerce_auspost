@@ -155,13 +155,16 @@ class ConfigureForm extends FormBase implements ConfigureFormInterface {
         'data-states-name' => 'insurance',
       ],
     ];
-    $form['options']['insurance_settings'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Insurance settings'),
-      '#description' => $this->t('Insurance calculation settings'),
-      '#open' => TRUE,
+    $form['options']['insurance_settings']['insurance_percentage'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Percentage of order value'),
+      '#description' => $this->t('Percentage of order to add on as insurance. For example, enter 1.5 to add 150% extra insurance cover.'),
+      '#min' => 0.1,
+      '#step' => 0.1,
+      '#size' => 5,
+      '#default_value' => $configuration['options']['insurance_percentage'],
       '#states' => [
-        'visible' => [
+        'required' => [
           'input[data-states-name="insurance"]' => [
             'checked' => TRUE,
           ],
