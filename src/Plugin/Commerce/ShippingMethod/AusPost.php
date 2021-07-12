@@ -29,6 +29,7 @@ use Drupal\physical\Length;
 use Drupal\physical\LengthUnit;
 use Drupal\physical\Weight;
 use Drupal\physical\WeightUnit;
+use Drupal\state_machine\WorkflowManagerInterface;
 use DVDoug\BoxPacker\ItemTooLargeException;
 use Exception;
 use Guzzle\Http\Exception\ClientErrorResponseException;
@@ -213,6 +214,8 @@ class AusPost extends ShippingMethodBase {
    *   The service container.
    * @param \Drupal\commerce_shipping\PackageTypeManagerInterface $packageTypeManager
    *   The package type manager.
+   * @param \Drupal\state_machine\WorkflowManagerInterface $workflowManager
+   *   The workflow manager.
    * @param \Psr\Log\LoggerInterface $watchdog
    *   Watchdog logger.
    * @param \Drupal\commerce_price\RounderInterface $rounder
@@ -234,6 +237,7 @@ class AusPost extends ShippingMethodBase {
     $pluginDefinition,
     ContainerInterface $container,
     PackageTypeManagerInterface $packageTypeManager,
+    WorkflowManagerInterface $workflowManager,
     LoggerInterface $watchdog,
     RounderInterface $rounder,
     ConfigureForm $configurationForm,
@@ -257,7 +261,8 @@ class AusPost extends ShippingMethodBase {
       $configuration,
       $pluginId,
       $pluginDefinition,
-      $packageTypeManager
+      $packageTypeManager,
+      $workflowManager
     );
   }
 
@@ -280,6 +285,7 @@ class AusPost extends ShippingMethodBase {
       $pluginDefinition,
       $container,
       $container->get('plugin.manager.commerce_package_type'),
+      $container->get('plugin.manager.workflow'),
       $container->get('logger.channel.commerce_auspost'),
       $container->get('commerce_price.rounder'),
       new ConfigureForm(),
@@ -485,11 +491,11 @@ class AusPost extends ShippingMethodBase {
         $serviceDefinition->getLabel()
       );
 
-      $rates[] = new ShippingRate(
-        $serviceId,
-        $service,
-        $postagePrice
-      );
+      $rates[] = new ShippingRate([
+        'shipping_method_id' => $serviceId,
+        'service' => $service,
+        'amount' => $postagePrice,
+      ]);
     }
 
     return $rates;
