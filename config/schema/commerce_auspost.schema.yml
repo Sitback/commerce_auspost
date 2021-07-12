@@ -19,7 +19,7 @@ commerce_shipping.commerce_shipping_method.plugin.auspost:
           type: boolean
           label: 'Include Insurance'
         log:
-          type: mapping:
+          type: mapping
           label: 'Log the following messages for debugging'
           mapping:
             request:
